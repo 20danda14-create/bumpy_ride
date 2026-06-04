@@ -92,7 +92,6 @@
     font-size: 44px;
     font-weight: 800;
     letter-spacing: -0.03em;
-    line-gradient: linear-gradient(135deg, var(--text) 30%, var(--accent) 100%);
     background: linear-gradient(135deg, var(--text) 30%, var(--accent) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -129,10 +128,7 @@
     animation: fillLoader 2.0s cubic-bezier(0.1, 0.85, 0.25, 1) forwards;
   }
 
-  @keyframes fillLoader {
-    0% { width: 0%; }
-    100% { width: 100%; }
-  }
+  @keyframes fillLoader { 0% { width: 0%; } 100% { width: 100%; } }
 
   .intro-status {
     font-size: 11px;
@@ -226,6 +222,22 @@
     line-height: 1.5;
   }
 
+  /* GPS Warning Banner */
+  .gps-warning {
+    background: rgba(247, 74, 106, 0.08);
+    border: 1px solid rgba(247, 74, 106, 0.25);
+    border-radius: var(--radius-sm);
+    padding: 12px;
+    font-size: 11px;
+    color: var(--danger);
+    font-family: var(--mono);
+    text-align: left;
+    margin-top: -10px;
+    margin-bottom: 16px;
+    line-height: 1.5;
+    display: none;
+  }
+
   .perm-btn {
     width: 100%;
     padding: 16px;
@@ -238,9 +250,20 @@
     font-weight: 600;
     cursor: pointer;
     transition: opacity 0.2s;
+    margin-bottom: 10px;
   }
 
   .perm-btn:hover { opacity: 0.88; }
+  
+  .fallback-link {
+    font-size: 12px;
+    font-family: var(--mono);
+    color: var(--text3);
+    cursor: pointer;
+    text-decoration: underline;
+    transition: color 0.2s;
+  }
+  .fallback-link:hover { color: var(--accent3); }
 
   /* Dashboard Cards */
   .grid { display: grid; gap: 16px; }
@@ -278,7 +301,7 @@
   }
   .vehicle-svg-wrap svg { width: 100%; height: 100%; transition: fill 0.2s ease; }
 
-  /* Dynamic Custom Map Canvas Area */
+  /* Map Area Canvas */
   .map-container {
     background: var(--surface2);
     border: 1px solid var(--border);
@@ -313,12 +336,8 @@
   .btn-start { background: var(--accent2); color: #0a0a0f; }
   .btn-stop { background: var(--danger); color: #fff; }
   
-  .config-panel {
-    display: flex; justify-content: flex-end; margin-bottom: 12px;
-  }
-  .restart-btn {
-    background: none; border: 1px solid var(--border); color: var(--text3); font-family: var(--mono); font-size: 11px; padding: 4px 10px; border-radius: 4px; cursor: pointer;
-  }
+  .config-panel { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+  .restart-btn { background: none; border: 1px solid var(--border); color: var(--text3); font-family: var(--mono); font-size: 11px; padding: 4px 10px; border-radius: 4px; cursor: pointer; }
   .restart-btn:hover { border-color: var(--accent); color: var(--text2); }
 
   @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
@@ -343,27 +362,35 @@
     <div class="perm-title">Sistem Yetkilendirmesi</div>
     <div class="perm-desc">Sürüş sarsıntı simülasyonu ve güzergah kaydı için sensör erişimlerini onaylayın:</div>
     
-    <div class="perm-notice-box">
+    <div class="perm-notice-box" id="perm-notice">
       • Hareket Sensörleri (İvmeölçer)<br>
-      • GPS Konum Takibi (Güzergah Haritası)<br>
-      • Gizlilik: Konum verileriniz tamamen cihazınızda kalır, kaydedilmez veya gönderilmez.
+      • GPS Konum Takibi (Güzergah Haritası)
+    </div>
+
+    <div class="gps-warning" id="gps-error-banner">
+      ⚠️ <strong>GPS Konum İzni Reddedildi!</strong><br>
+      Harita ve rota çizimi yapılamayacak. Adres çubuğundaki kilit simgesine tıklayıp konuma tekrar izin verebilir veya sistemi yanıltmak için sanal simülasyon modunu açabilirsiniz.
     </div>
 
     <button class="perm-btn" id="start-btn" onclick="requestCorePermissions()">
-      Sistemleri Başlat ve Kalibre Et
+      Sistemleri Başlat ve İzin İste
     </button>
+    
+    <div class="fallback-link" id="simulation-fallback" onclick="launchAppHub(true)">
+      İzinsiz Devam Et (Sanal Güzergah Modu)
+    </div>
   </div>
 </div>
 
 <div class="app" id="main-app" style="display:none;">
 
   <div class="header">
-    <div class="logo">Bumpy Ride Engine v2.0</div>
+    <div class="logo" id="app-mode-tag">Bumpy Ride Engine v2.0</div>
     <div class="title">Sürüş Analitiği</div>
   </div>
 
   <div class="config-panel">
-    <button class="restart-btn" onclick="restartApp()">↺ Yeniden Kalibre Et</button>
+    <button class="restart-btn" onclick="restartApp()">↺ Yeniden Yapılandır</button>
   </div>
 
   <div class="grid">
@@ -415,74 +442,81 @@
 </div>
 
 <script>
-// --- INTRO SCREEN MOTOR CONTROLLER ---
+// --- INTRO SCREEN CONTROLLER ---
 document.addEventListener("DOMContentLoaded", () => {
   const steps = ["Telemetri modülleri yükleniyor...", "GPS ağ geçitleri taranıyor...", "Bumpy Ride kalibrasyonu tamamlandı."];
-  let idx = 0;
-  const txt = document.getElementById("intro-status-text");
-  
-  const timer = setInterval(() => {
-    if (idx < steps.length - 1) { idx++; txt.textContent = steps[idx]; }
-  }, 600);
-
+  let idx = 0; const txt = document.getElementById("intro-status-text");
+  const timer = setInterval(() => { if (idx < steps.length - 1) { idx++; txt.textContent = steps[idx]; } }, 600);
   setTimeout(() => {
-    clearInterval(timer);
-    const scr = document.getElementById("intro-screen");
+    clearInterval(timer); const scr = document.getElementById("intro-screen");
     scr.style.opacity = "0"; scr.style.transform = "scale(1.03)";
     setTimeout(() => { scr.style.display = "none"; document.getElementById("permission-screen").style.display = "flex"; }, 600);
   }, 2000);
 });
 
-// App Core Variables
 let watchId = null;
 let isRideActive = false;
 let currentNetG = 0;
+let isSimulationMode = false; // GPS izni olmadığında devreye giren akıllı mod flag'i
 
-// Analytical Telemetry Database Vectors
-let driveSessionData = []; // Array of {lat, lon, gForce, timestamp}
-let sessionMaxG = 0;
-let sessionTotalG = 0;
-let sessionCount = 0;
+let driveSessionData = [];
+let sessionMaxG = 0; let sessionTotalG = 0; let sessionCount = 0;
 
-// Playback Engine Variables
 let isPlaybackActive = false;
-let playbackIdx = 0;
-let playbackTimer = null;
+let playbackIdx = 0; let playbackTimer = null;
 
 async function requestCorePermissions() {
-  // Motion Hardware Validation
+  // 1. Motion/Accelerometer Permission
   if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
     try {
       const motionPerm = await DeviceOrientationEvent.requestPermission();
-      if (motionPerm !== 'granted') { alert('Sensör izni reddedildi.'); return; }
-    } catch (e) { alert('Hareket sensör izni başlatılamadı.'); return; }
+      if (motionPerm !== 'granted') { alert('Sensör izni reddedildi. İvme verisi alınamıyor.'); return; }
+    } catch (e) { alert('Sensör izin katmanı başlatılamadı.'); return; }
   }
 
-  // Location Hardware Validation
+  // 2. GPS/Geolocation Hardware Request & Error Handling
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
-      () => { launchAppHub(); },
-      (err) => { alert('GPS Konum izni verilmedi. Güzergah takibi yapılamaz.'); launchAppHub(); }
+      () => { 
+        isSimulationMode = false;
+        launchAppHub(false); 
+      },
+      (err) => { 
+        // İzin verilmediğinde tetiklenen blok (err.code === 1: PERMISSION_DENIED)
+        document.getElementById('gps-error-banner').style.display = 'block';
+        document.getElementById('start-btn').textContent = "İzni Tekrar Dene";
+        document.getElementById('simulation-fallback').style.color = 'var(--accent3)';
+      },
+      { enableHighAccuracy: true, timeout: 6000 }
     );
   } else {
-    alert('Cihazınızda GPS desteği bulunmuyor.');
-    launchAppHub();
+    document.getElementById('gps-error-banner').style.display = 'block';
   }
 }
 
-function launchAppHub() {
+function launchAppHub(forcedSimulation = false) {
+  if (forcedSimulation) isSimulationMode = true;
+
   document.getElementById('permission-screen').style.display = 'none';
   document.getElementById('main-app').style.display = 'block';
+  
+  // Uygulama başlığını mod durumuna göre güncelle
+  const tag = document.getElementById('app-mode-tag');
+  if (isSimulationMode) {
+    tag.textContent = "Bumpy Ride Engine (Sanal GPS Modu)";
+    tag.style.color = "var(--accent3)";
+  } else {
+    tag.textContent = "Bumpy Ride Engine v2.0";
+    tag.style.color = "var(--accent)";
+  }
 
   if (window.DeviceMotionEvent) {
     window.addEventListener('devicemotion', calculateMotionStream, true);
   }
 }
 
-// Read raw motion parameters and translate to color gravity data
 function calculateMotionStream(e) {
-  if (isPlaybackActive) return; // Freeze live sensor during playback replay
-
+  if (isPlaybackActive) return;
   let acc = e.accelerationIncludingGravity || e.acceleration;
   if (!acc || acc.x === null) return;
 
@@ -490,7 +524,7 @@ function calculateMotionStream(e) {
   let gForce = rawForce / 9.80665;
   let netG = Math.abs(gForce - 1.0);
   
-  if (netG < 0.04) netG = 0; // Filter minor hand static jitter
+  if (netG < 0.04) netG = 0;
   currentNetG = netG;
 
   document.getElementById('ride-value').textContent = netG.toFixed(2);
@@ -514,13 +548,11 @@ function animateVehicleGraphic(gVal) {
     let shakeX = (Math.random() - 0.5) * gVal * 28;
     let shakeY = (Math.random() - 0.5) * gVal * 28;
     let rotateDeg = (Math.random() - 0.5) * gVal * 18;
-    
     mesh.style.transform = `translate(${shakeX}px, ${shakeY}px) rotate(${rotateDeg}deg)`;
     
-    // Impact threshold alert coloring representation
-    if (gVal < 0.15) body.setAttribute('fill', '#3dd6ac');      // Smooth Green
-    else if (gVal < 0.40) body.setAttribute('fill', '#f7a26a'); // Warning Orange
-    else body.setAttribute('fill', '#f74a6a');                  // Severe Bump Red
+    if (gVal < 0.15) body.setAttribute('fill', '#3dd6ac');
+    else if (gVal < 0.40) body.setAttribute('fill', '#f7a26a');
+    else body.setAttribute('fill', '#f74a6a');
   } else {
     mesh.style.transform = 'translate(0px, 0px) rotate(0deg)';
     body.setAttribute('fill', '#7c6af7');
@@ -534,12 +566,9 @@ function toggleRideAnalysis() {
   const mapWrap = document.getElementById('map-wrap');
   const feedbackBox = document.getElementById('ride-feedback');
 
-  if (isPlaybackActive) {
-    stopPlaybackReplay();
-  }
+  if (isPlaybackActive) stopPlaybackReplay();
 
   if (!isRideActive) {
-    // START RIDE CAPTURING
     isRideActive = true;
     driveSessionData = [];
     sessionMaxG = 0; sessionTotalG = 0; sessionCount = 0;
@@ -548,12 +577,12 @@ function toggleRideAnalysis() {
     feedbackBox.style.display = 'none';
     badge.textContent = 'CANLI TAKİP';
     badge.className = 'card-badge badge-active';
-    lbl.textContent = 'Güzergahınız ve sarsıntılarınız gerçek zamanlı işleniyor...';
+    lbl.textContent = isSimulationMode ? 'Sanal GPS modu aktif. İvme verileriniz haritaya işlenecektir...' : 'Güzergahınız ve sarsıntılarınız gerçek zamanlı işleniyor...';
     btn.textContent = 'Sürüşü Bitir ve Raporla';
     btn.className = 'ride-btn btn-stop';
 
-    // Spawn high-accuracy geographic telemetry watch thread
-    if (navigator.geolocation) {
+    if (!isSimulationMode && navigator.geolocation) {
+      // GERÇEK GPS MODU ACTIVE
       watchId = navigator.geolocation.watchPosition(
         (pos) => {
           if (isRideActive) {
@@ -563,21 +592,37 @@ function toggleRideAnalysis() {
               gForce: currentNetG,
               time: Date.now()
             });
-            // Fake coordinate generator wrapper for static room testing simulation injection
-            // If user stays perfectly still, inject micro steps so a route line always draws
-            if(driveSessionData.length > 1 && driveSessionData[driveSessionData.length-1].lat === driveSessionData[0].lat) {
-               generateSimulationDrift();
-            }
           }
         },
-        (err) => {},
+        (err) => { console.log("GPS Sinyal kaybı"); },
         { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
       );
+    } else {
+      // SANAL MOD SİMÜLASYON DÖNGÜSÜ (GPS YOKSA)
+      let baseLat = 39.9208, baseLon = 32.8541; // Ankara Merkez koordinat bazlı sanal başlangıç
+      let simStep = 0;
+      
+      watchId = setInterval(() => {
+        if (isRideActive) {
+          // İvmeölçer hareket ettikçe sanal koordinatı hafifçe büken dinamik örüntü
+          baseLat += 0.00012 + (Math.sin(simStep) * 0.00004);
+          baseLon += 0.00008 + (Math.cos(simStep) * 0.00009);
+          
+          driveSessionData.push({
+            lat: baseLat,
+            lon: baseLon,
+            gForce: currentNetG,
+            time: Date.now()
+          });
+          simStep++;
+        }
+      }, 1000); // Saniyede bir sanal veri paketi oluşturur
     }
   } else {
-    // STOP RIDE & TRIGGER ANIMATED PLAYBACK
+    // SÜRÜŞÜ BİTİR
     isRideActive = false;
-    if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+    if (!isSimulationMode && watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+    if (isSimulationMode && watchId !== null) { clearInterval(watchId); watchId = null; }
     
     badge.textContent = 'BİTTİ';
     badge.className = 'card-badge badge-warn';
@@ -590,58 +635,45 @@ function toggleRideAnalysis() {
   }
 }
 
-// Micro drift injection for layout drawing simulation fallback inside rooms
-function generateSimulationDrift() {
-  let last = driveSessionData[driveSessionData.length-1];
-  let count = driveSessionData.length;
-  last.lat += Math.sin(count * 0.5) * 0.0001;
-  last.lon += Math.cos(count * 0.5) * 0.0001;
-}
-
 function processRideFeedbackReport() {
   const box = document.getElementById('ride-feedback');
   const scoreEl = document.getElementById('feedback-score');
   const textEl = document.getElementById('feedback-text');
   
-  if (sessionCount === 0) {
-    // Backup mockup track generator if zero telemetry recorded
-    injectMockupTelemetryRoute();
+  // Eğer cihazda hiç hareket/sensör verisi oluşmamışsa örnek bir test rotası enjekte et
+  if (driveSessionData.length < 2) {
+    let baseLat = 39.9208, baseLon = 32.8541; 
+    for(let i=0; i<40; i++) {
+      let mockG = i % 9 === 0 ? 0.55 : (i % 6 === 0 ? 0.22 : 0.01);
+      driveSessionData.push({
+        lat: baseLat + (i * 0.00014),
+        lon: baseLon + (Math.sin(i * 0.5) * 0.00018),
+        gForce: mockG,
+        time: Date.now()
+      });
+      sessionTotalG += mockG; sessionCount++;
+      if(mockG > sessionMaxG) sessionMaxG = mockG;
+    }
   }
 
-  let avgG = sessionTotalG / sessionCount;
+  let avgG = sessionTotalG / (sessionCount || 1);
   let score = 100 - (avgG * 130) - (sessionMaxG * 40);
   score = Math.max(10, Math.min(100, Math.round(score)));
 
   scoreEl.textContent = `Konfor Skoru: %${score}`;
   box.style.display = 'block';
 
+  let modePrefix = isSimulationMode ? "[SANAL GEZİNTİ RAPORU] " : "";
+
   if (score >= 82) {
-    textEl.textContent = `Harika! Akıcı ve konforlu bir güzergâh tamamlandı. Ortalama sarsıntınız oldukça düşüktü (${avgG.toFixed(2)} G). Rota boyunca ciddi bir çukura rastlanmadı.`;
+    textEl.textContent = modePrefix + `Harika! Akıcı ve konforlu bir güzergâh tamamlandı. Ortalama sarsıntınız oldukça düşüktü (${avgG.toFixed(2)} G). Rota boyunca ciddi bir çukura rastlanmadı.`;
   } else if (score >= 60) {
-    textEl.textContent = `Standart şehir içi yol deneyimi. Rota üzerinde sarı tonlu bölgelerde minör sarsıntılar ve tümsek salınımları (${sessionMaxG.toFixed(2)} G tepe noktası) kaydedildi.`;
+    textEl.textContent = modePrefix + `Standart şehir içi yol deneyimi. Rota üzerinde sarı tonlu bölgelerde minör sarsıntılar ve tümsek salınımları (${sessionMaxG.toFixed(2)} G tepe noktası) kaydedildi.`;
   } else {
-    textEl.textContent = `⚠️ Bozuk ve sarsıntılı yol profili! Rota üzerinde kırmızı şeritlerle işaretlenen alanlarda yüksek dikey ivmeli dalgalanmalar saptandı. Amortisör ve sürüş konforu kritik eşiğin altına düşmüş.`;
+    textEl.textContent = modePrefix + `⚠️ Bozuk ve sarsıntılı yol profili! Rota üzerinde kırmızı şeritlerle işaretlenen alanlarda yüksek dikey ivmeli dalgalanmalar saptandı. Amortisör ve sürüş konforu kritik eşiğin altına düşmüş.`;
   }
 }
 
-function injectMockupTelemetryRoute() {
-  // Inject synthetic beautiful geometric data loop if hardware lacks GPS locks indoor
-  let baseLat = 39.9208, baseLon = 32.8541; 
-  for(let i=0; i<45; i++) {
-    let mockG = i % 12 === 0 ? 0.65 : (i % 7 === 0 ? 0.28 : 0.02);
-    driveSessionData.push({
-      lat: baseLat + (i * 0.00015),
-      lon: baseLon + (Math.sin(i * 0.4) * 0.0002),
-      gForce: mockG,
-      time: Date.now()
-    });
-    sessionTotalG += mockG;
-    sessionCount++;
-    if(mockG > sessionMaxG) sessionMaxG = mockG;
-  }
-}
-
-// --- ANIMATED PLAYBACK REPLAY HARİTA MOTORU ---
 function startAnimatedPlayback() {
   if (driveSessionData.length < 2) return;
   
@@ -656,36 +688,26 @@ function startAnimatedPlayback() {
 
   if (playbackTimer) clearInterval(playbackTimer);
   
-  // High-speed rendering loop ticks every 80ms to replay the whole ride quickly
   playbackTimer = setInterval(() => {
-    if (playbackIdx >= driveSessionData.length) {
-      playbackIdx = 0; // Infinite auto-loop simulation replay
-    }
+    if (playbackIdx >= driveSessionData.length) playbackIdx = 0; // Başa sarıp döngü yapar
     
     let activePoint = driveSessionData[playbackIdx];
-    
-    // Feed the live dashboards from historic file data row array indices
     document.getElementById('ride-value').textContent = activePoint.gForce.toFixed(2);
     animateVehicleGraphic(activePoint.gForce);
     
-    // Draw the custom map trace
     renderVectorMapRoute(playbackIdx);
-    
     playbackIdx++;
-  }, 80);
+  }, 90);
 }
 
 function renderVectorMapRoute(currentProgressIdx) {
   const canvas = document.getElementById('map-canvas');
   const ctx = canvas.getContext('2d');
   
-  // Match structural bounding element wrappers
   canvas.width = canvas.parentElement.clientWidth;
   canvas.height = canvas.parentElement.clientHeight;
-  
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   
-  // Calculate geographic coordinate box bounds (Bounding Box Min/Max)
   let lats = driveSessionData.map(p => p.lat);
   let lons = driveSessionData.map(p => p.lon);
   let minLat = Math.min(...lats), maxLat = Math.max(...lats);
@@ -694,66 +716,42 @@ function renderVectorMapRoute(currentProgressIdx) {
   let latSpan = maxLat - minLat || 0.0001;
   let lonSpan = maxLon - minLon || 0.0001;
 
-  // Convert raw lat/lon vectors into UI canvas pixels with padding buffers
   function toCanvasCoords(lat, lon) {
     let padding = 35;
     let x = padding + ((lon - minLon) / lonSpan) * (canvas.width - padding * 2);
-    // Invert Y because canvas draws downward from top
     let y = (canvas.height - padding) - ((lat - minLat) / latSpan) * (canvas.height - padding * 2);
     return { x, y };
   }
 
-  // Draw grid background system lines onto the vector view area
-  ctx.strokeStyle = 'rgba(255,255,255,0.02)';
-  ctx.lineWidth = 1;
+  // Grid background
+  ctx.strokeStyle = 'rgba(255,255,255,0.02)'; ctx.lineWidth = 1;
   for(let g=0; g<canvas.width; g+=30) { ctx.beginPath(); ctx.moveTo(g,0); ctx.lineTo(g,canvas.height); ctx.stroke(); }
 
-  // Draw the full route trail up to the currently played animation frame marker point
+  // Draw history line
   for (let i = 1; i <= currentProgressIdx; i++) {
-    let p1 = driveSessionData[i - 1];
-    let p2 = driveSessionData[i];
+    let p1 = driveSessionData[i - 1]; let p2 = driveSessionData[i];
+    let c1 = toCanvasCoords(p1.lat, p1.lon); let c2 = toCanvasCoords(p2.lat, p2.lon);
     
-    let c1 = toCanvasCoords(p1.lat, p1.lon);
-    let c2 = toCanvasCoords(p2.lat, p2.lon);
+    ctx.beginPath(); ctx.moveTo(c1.x, c1.y); ctx.lineTo(c2.x, c2.y);
     
-    ctx.beginPath();
-    ctx.moveTo(c1.x, c1.y);
-    ctx.lineTo(c2.x, c2.y);
+    if (p2.gForce < 0.15) { ctx.strokeStyle = '#3dd6ac'; ctx.lineWidth = 3; } 
+    else if (p2.gForce < 0.40) { ctx.strokeStyle = '#f7a26a'; ctx.lineWidth = 4.5; } 
+    else { ctx.strokeStyle = '#f74a6a'; ctx.lineWidth = 6; }
     
-    // Set line color dynamically based on sensor shock profile levels
-    if (p2.gForce < 0.15) {
-      ctx.strokeStyle = '#3dd6ac'; // Green Smooth
-      ctx.lineWidth = 3;
-    } else if (p2.gForce < 0.40) {
-      ctx.strokeStyle = '#f7a26a'; // Orange Moderate
-      ctx.lineWidth = 4.5;
-    } else {
-      ctx.strokeStyle = '#f74a6a'; // Red High-Impact
-      ctx.lineWidth = 6;
-    }
-    
-    ctx.lineCap = 'round';
-    ctx.stroke();
+    ctx.lineCap = 'round'; ctx.stroke();
   }
 
-  // Render a futuristic glowing tracking circle pulse marker overhead the current car node position
+  // Glow pointer target tracker node ball
   if(driveSessionData[currentProgressIdx]) {
     let activePt = driveSessionData[currentProgressIdx];
     let activeCoord = toCanvasCoords(activePt.lat, activePt.lon);
     
-    ctx.beginPath();
-    ctx.arc(activeCoord.x, activeCoord.y, 7, 0, Math.PI * 2);
-    ctx.fillStyle = '#7c6af7';
-    ctx.shadowBlur = 12;
-    ctx.shadowColor = '#7c6af7';
-    ctx.fill();
-    ctx.shadowBlur = 0; // Reset canvas layout shadow matrix configuration buffers
+    ctx.beginPath(); ctx.arc(activeCoord.x, activeCoord.y, 7, 0, Math.PI * 2);
+    ctx.fillStyle = '#7c6af7'; ctx.shadowBlur = 12; ctx.shadowColor = '#7c6af7'; ctx.fill();
+    ctx.shadowBlur = 0; 
     
-    ctx.beginPath();
-    ctx.arc(activeCoord.x, activeCoord.y, 11, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(124,106,247,0.4)';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
+    ctx.beginPath(); ctx.arc(activeCoord.x, activeCoord.y, 11, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(124,106,247,0.4)'; ctx.lineWidth = 1.5; ctx.stroke();
   }
 }
 
@@ -767,12 +765,18 @@ function stopPlaybackReplay() {
 function restartApp() {
   isRideActive = false;
   stopPlaybackReplay();
-  if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+  if (watchId !== null) {
+    if(isSimulationMode) clearInterval(watchId);
+    else navigator.geolocation.clearWatch(watchId);
+    watchId = null;
+  }
   
   document.getElementById('main-app').style.display = 'none';
   document.getElementById('permission-screen').style.display = 'flex';
   document.getElementById('ride-feedback').style.display = 'none';
   document.getElementById('map-wrap').style.display = 'none';
+  document.getElementById('gps-error-banner').style.display = 'none';
+  document.getElementById('start-btn').textContent = "Sistemleri Başlat ve İzin İste";
   
   document.getElementById('ride-badge').textContent = 'Hazır';
   document.getElementById('ride-badge').className = 'card-badge badge-warn';
