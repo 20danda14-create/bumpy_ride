@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>SensörHub — Sürüş & Ortam Analizi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface2: #1a1a26;
+    --border: rgba(255,255,255,0.08);
+    --accent: #7c6af7;
+    --accent2: #3dd6ac;
+    --accent3: #f7a26a;
+    --text: #f0eeff;
+    --text2: rgba(240,238,255,0.55);
+    --text3: rgba(240,238,255,0.3);
+    --danger: #f74a6a;
+    --mono: 'Space Mono', monospace;
+    --sans: 'Syne', sans-serif;
+    --radius: 16px;
+    --radius-sm: 8px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(124,106,247,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(124,106,247,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .app {
+    position: relative;
+    z-index: 1;
+    max-width: 520px;
+    margin: 0 auto;
+    padding: 24px 16px 48px;
+  }
+
+  .header {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+
+  .logo {
+    font-size: 11px;
+    font-family: var(--mono);
+    letter-spacing: 0.3em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    opacity: 0.9;
+  }
+
+  .title {
+    font-size: 32px;
+    font-weight: 800;
+    line-height: 1.1;
+    background: linear-gradient(135deg, var(--text) 0%, var(--accent) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 8px;
+  }
+
+  .subtitle {
+    font-size: 13px;
+    color: var(--text2);
+    font-family: var(--mono);
+  }
+
+  /* Permission screen */
+  #permission-screen {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    overflow-y: auto;
+  }
+
+  .perm-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 32px 24px;
+    max-width: 440px;
+    width: 100%;
+    text-align: center;
+  }
+
+  .perm-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: rgba(124,106,247,0.12);
+    border: 1px solid rgba(124,106,247,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    font-size: 28px;
+  }
+
+  .perm-title {
+    font-size: 22px;
+    font-weight: 800;
+    margin-bottom: 8px;
+  }
+
+  .perm-desc {
+    font-size: 14px;
+    color: var(--text2);
+    line-height: 1.6;
+    margin-bottom: 24px;
+    font-family: var(--mono);
+  }
+
+  .perm-list {
+    list-style: none;
+    margin-bottom: 28px;
+    text-align: left;
+  }
+
+  .perm-list li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 12px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(255,255,255,0.01);
+    border-radius: var(--radius-sm);
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .perm-list li:hover {
+    background: rgba(255,255,255,0.03);
+  }
+
+  .perm-checkbox {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--accent);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .perm-info {
+    flex-grow: 1;
+  }
+
+  .perm-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 6px;
+  }
+
+  .dot-ride { background: var(--danger); }
+  .dot-mic { background: var(--accent); }
+  .dot-cam { background: var(--accent2); }
+  .dot-gyro { background: var(--accent3); }
+
+  .perm-btn {
+    width: 100%;
+    padding: 16px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: var(--sans);
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+    letter-spacing: 0.02em;
+  }
+
+  .perm-btn:hover { opacity: 0.88; }
+  .perm-btn:active { transform: scale(0.98); }
+  .perm-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .perm-status {
+    margin-top: 12px;
+    font-size: 12px;
+    font-family: var(--mono);
+    color: var(--text3);
+    min-height: 20px;
+  }
+
+  /* Status bar */
+  .status-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 16px;
+    margin-bottom: 20px;
+    font-size: 12px;
+    font-family: var(--mono);
+  }
+
+  .status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text2);
+  }
+
+  .pulse-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--accent2);
+    animation: pulse 1.8s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.8); }
+  }
+
+  .restart-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text2);
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .restart-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* Cards grid */
+  .grid {
+    display: grid;
+    gap: 16px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    transition: border-color 0.3s;
+    display: none;
+  }
+
+  .card:hover { border-color: rgba(124,106,247,0.25); }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  .card-label {
+    font-size: 11px;
+    font-family: var(--mono);
+    letter-spacing: 0.15em;
+    color: var(--text3);
+    text-transform: uppercase;
+  }
+
+  .card-badge {
+    font-size: 10px;
+    font-family: var(--mono);
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: 1px solid;
+  }
+
+  .badge-active { color: var(--accent2); border-color: rgba(61,214,172,0.3); background: rgba(61,214,172,0.08); }
+  .badge-warn { color: var(--accent3); border-color: rgba(247,162,106,0.3); background: rgba(247,162,106,0.08); }
+  .badge-danger { color: var(--danger); border-color: rgba(247,74,106,0.3); background: rgba(247,74,106,0.08); }
+
+  .db-value {
+    font-size: 64px;
+    font-family: var(--mono);
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 4px;
+    transition: color 0.3s;
+  }
+
+  .db-unit { font-size: 13px; font-family: var(--mono); color: var(--text3); margin-bottom: 16px; }
+
+  /* Vehicle Visualizer Container */
+  .vehicle-container {
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    height: 130px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    margin: 16px 0;
+    border: 1px solid rgba(255,255,255,0.03);
+  }
+
+  .vehicle-svg-wrap {
+    width: 140px;
+    height: 60px;
+    transition: transform 0.05s ease-out;
+    transform-origin: center center;
+  }
+
+  .vehicle-svg-wrap svg {
+    width: 100%;
+    height: 100%;
+    transition: fill 0.2s ease;
+  }
+
+  /* Feedback box style */
+  .feedback-box {
+    background: rgba(124,106,247,0.06);
+    border: 1px solid rgba(124,106,247,0.2);
+    border-radius: var(--radius-sm);
+    padding: 16px;
+    margin-top: 16px;
+    display: none;
+  }
+
+  .feedback-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--accent2);
+    margin-bottom: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .feedback-text {
+    font-size: 12px;
+    font-family: var(--mono);
+    color: var(--text2);
+    line-height: 1.6;
+  }
+
+  .ride-btn-group {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin-top: 16px;
+  }
+
+  .ride-btn {
+    padding: 14px;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .btn-start { background: var(--accent2); color: #0a0a0f; }
+  .btn-stop { background: var(--danger); color: #fff; }
+
+  /* Decibel & modules layout basics */
+  .db-bar-wrap { height: 8px; background: var(--surface2); border-radius: 4px; overflow: hidden; margin-bottom: 12px; }
+  .db-bar { height: 100%; border-radius: 4px; transition: width 0.1s ease-out; background: linear-gradient(90deg, var(--accent2) 0%, var(--accent) 60%, var(--danger) 100%); }
+  .db-scale { display: flex; justify-content: space-between; font-size: 10px; font-family: var(--mono); color: var(--text3); }
+  .db-label { font-size: 12px; font-family: var(--mono); color: var(--text2); margin-top: 8px; }
+
+  .direction-visual { display: flex; align-items: center; justify-content: center; padding: 16px 0 8px; }
+  #compass-canvas { width: 180px; height: 180px; }
+
+  .orientation-display { display: flex; align-items: center; justify-content: center; gap: 24px; padding: 8px 0; }
+  .orient-phone { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .phone-icon { width: 44px; height: 70px; border: 2px solid var(--accent); border-radius: 8px; background: var(--surface2); position: relative; transition: transform 0.4s ease; }
+  .phone-icon.landscape { transform: rotate(-90deg); }
+  .orient-label { font-size: 12px; font-family: var(--mono); color: var(--text2); text-align: center; }
+  .orient-status { font-size: 22px; font-weight: 800; color: var(--accent); }
+  .angles-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 16px; }
+  .angle-item { background: var(--surface2); border-radius: var(--radius-sm); padding: 10px 8px; text-align: center; }
+  .angle-key { font-size: 10px; font-family: var(--mono); color: var(--text3); text-transform: uppercase; margin-bottom: 4px; }
+  .angle-val { font-size: 18px; font-family: var(--mono); font-weight: 700; color: var(--accent3); }
+
+  .light-value { font-size: 56px; font-family: var(--mono); font-weight: 700; line-height: 1; margin-bottom: 4px; color: var(--accent3); }
+  .light-bar-wrap { height: 8px; background: var(--surface2); border-radius: 4px; overflow: hidden; margin-bottom: 12px; }
+  .light-bar { height: 100%; border-radius: 4px; transition: width 0.4s ease; background: linear-gradient(90deg, #3a2a00 0%, var(--accent3) 60%, #fff5aa 100%); }
+  
+  #cam-video, #cam-canvas { display: none; }
+  .warn-box { background: rgba(247,74,106,0.08); border: 1px solid rgba(247,74,106,0.25); border-radius: var(--radius-sm); padding: 12px 16px; font-size: 12px; font-family: var(--mono); color: #f7a0b0; margin-top: 8px; }
+</style>
+</head>
+<body>
+
+<div id="permission-screen">
+  <div class="perm-card">
+    <div class="perm-icon">🚗</div>
+    <div class="perm-title">Modül Seçimi</div>
+    <div class="perm-desc">Ekranda görmek istediğiniz ve izin verdiğiniz özellikleri belirleyin:</div>
+    
+    <ul class="perm-list">
+      <li onclick="toggleCheckbox('chk-ride')">
+        <input type="checkbox" id="chk-ride" class="perm-checkbox" checked onclick="event.stopPropagation()">
+        <div class="perm-info">
+          <div><span class="perm-dot dot-ride"></span><strong>🚗 Canlı Araç Takibi & Geri Bildirim</strong></div>
+          <div style="font-size:11px; color:var(--text3)">Sarsıntı simülatörü ve akıllı sürüş analizi</div>
+        </div>
+      </li>
+      <li onclick="toggleCheckbox('chk-mic')">
+        <input type="checkbox" id="chk-mic" class="perm-checkbox" onclick="event.stopPropagation()">
+        <div class="perm-info">
+          <div><span class="perm-dot dot-mic"></span><strong>🎙️ Mikrofon Modülü</strong></div>
+          <div style="font-size:11px; color:var(--text3)">Desibel ölçer ve ses kaynağı yön tayini</div>
+        </div>
+      </li>
+      <li onclick="toggleCheckbox('chk-gyro')">
+        <input type="checkbox" id="chk-gyro" class="perm-checkbox" onclick="event.stopPropagation()">
+        <div class="perm-info">
+          <div><span class="perm-dot dot-gyro"></span><strong>📱 Telefon Eğimi & Yönü</strong></div>
+          <div style="font-size:11px; color:var(--text3)">Alfa, Beta, Gamma açıları anlık takibi</div>
+        </div>
+      </li>
+      <li onclick="toggleCheckbox('chk-cam')">
+        <input type="checkbox" id="chk-cam" class="perm-checkbox" onclick="event.stopPropagation()">
+        <div class="perm-info">
+          <div><span class="perm-dot dot-cam"></span><strong>💡 Ortam Işığı (Kamera)</strong></div>
+          <div style="font-size:11px; color:var(--text3)">Kamera piksellerinden lüks tahmini</div>
+        </div>
+      </li>
+    </ul>
+
+    <button class="perm-btn" id="start-btn" onclick="requestSelectedPermissions()">
+      Uygulamayı Başlat
+    </button>
+    <div class="perm-status" id="perm-status">Tercihlerinizi yapıp butona basın</div>
+  </div>
+</div>
+
+<div class="app" id="main-app" style="display:none;">
+
+  <div class="header">
+    <div class="logo">SensörHub Pro</div>
+    <div class="title">Sürüş Görselleştirici</div>
+    <div class="subtitle">Anlık sarsıntı ve araç tepki simülasyonu</div>
+  </div>
+
+  <div class="status-bar">
+    <div class="status-indicator">
+      <div class="pulse-dot"></div>
+      <span>Sistemler Aktif</span>
+    </div>
+    <button class="restart-btn" onclick="restartApp()">↺ Yapılandır</button>
+  </div>
+
+  <div class="grid">
+
+    <div class="card" id="ride-card">
+      <div class="card-header">
+        <div class="card-label">Sürüş Durumu</div>
+        <div class="card-badge badge-warn" id="ride-badge">Hazır</div>
+      </div>
+      
+      <div style="display: flex; justify-content: space-between; align-items: baseline;">
+        <div class="db-value" id="ride-value">0.00</div>
+        <div class="angle-key" style="font-size: 12px; color: var(--text3);" id="ride-peak-label">En Yüksek: 0.00 G</div>
+      </div>
+      <div class="db-unit">Anlık Titreşim İvmesi (G)</div>
+      
+      <div class="vehicle-container">
+        <div class="vehicle-svg-wrap" id="vehicle-mesh">
+          <svg viewBox="0 0 120 50">
+            <path id="vehicle-body" d="M10,35 L20,35 C22,30 28,30 30,35 L80,35 C82,30 88,30 90,35 L110,35 L108,28 C106,24 100,22 92,21 L75,18 L45,18 L25,24 L12,28 Z" fill="#7c6af7" />
+            <circle cx="25" cy="35" r="5" fill="#0a0a0f" stroke="#3dd6ac" stroke-width="1.5" />
+            <circle cx="85" cy="35" r="5" fill="#0a0a0f" stroke="#3dd6ac" stroke-width="1.5" />
+            <path d="M46,20 L73,20 L70,25 L46,25 Z" fill="#0a0a0f" opacity="0.6"/>
+          </svg>
+        </div>
+      </div>
+
+      <div class="db-label" id="ride-label" style="text-align: center;">Yola çıkmaya hazır mısınız?</div>
+
+      <div class="feedback-box" id="ride-feedback">
+        <div class="feedback-title">
+          <span>📋 Sürüş Analiz Özeti</span>
+          <span id="feedback-score" style="color: var(--accent3); font-family: var(--mono); font-weight: bold;">Skor: --</span>
+        </div>
+        <div class="feedback-text" id="feedback-text">
+          Sürüş bitiminde konfor puanı ve değerlendirme raporu burada görünecektir.
+        </div>
+      </div>
+
+      <div class="ride-btn-group">
+        <button class="ride-btn btn-start" id="btn-ride-toggle" onclick="toggleRideAnalysis()">Sürüşü Başlat</button>
+      </div>
+    </div>
+
+    <div class="card" id="db-card">
+      <div class="card-header">
+        <div class="card-label">🎙 Ses Şiddeti</div>
+        <div class="card-badge badge-active">Dinleniyor</div>
+      </div>
+      <div class="db-value" id="db-value">—</div>
+      <div class="db-unit">desibel (dB)</div>
+      <div class="db-bar-wrap">
+        <div class="db-bar" id="db-bar" style="width:0%"></div>
+      </div>
+      <div class="db-scale">
+        <span>0 dB</span><span>Normal ~60</span><span>Yüksek ~90</span><span>130 dB</span>
+      </div>
+    </div>
+
+    <div class="card" id="dir-card">
+      <div class="card-header">
+        <div class="card-label">🔊 Ses Yönü</div>
+        <div class="card-badge badge-active">Stereo</div>
+      </div>
+      <div class="direction-visual">
+        <canvas id="compass-canvas" width="180" height="180"></canvas>
+      </div>
+      <div class="db-label" id="dir-label" style="text-align:center;">Ses kaynağı aranıyor...</div>
+    </div>
+
+    <div class="card" id="orient-card">
+      <div class="card-header">
+        <div class="card-label">📱 Telefon Yönü</div>
+        <div class="card-badge badge-active">Gyroscope</div>
+      </div>
+      <div class="orientation-display">
+        <div class="orient-phone">
+          <div class="phone-icon" id="phone-icon"></div>
+        </div>
+        <div>
+          <div class="orient-status" id="orient-text">Dikey</div>
+        </div>
+      </div>
+      <div class="angles-grid">
+        <div class="angle-item"><div class="angle-key">Alfa α</div><div class="angle-val" id="alpha-val">0°</div></div>
+        <div class="angle-item"><div class="angle-key">Beta β</div><div class="angle-val" id="beta-val">0°</div></div>
+        <div class="angle-item"><div class="angle-key">Gamma γ</div><div class="angle-val" id="gamma-val">0°</div></div>
+      </div>
+    </div>
+
+    <div class="card" id="light-card">
+      <div class="card-header">
+        <div class="card-label">💡 Ortam Işığı</div>
+        <div class="card-badge badge-warn">Kamera Analizi</div>
+      </div>
+      <div class="light-value" id="light-value">—</div>
+      <div class="light-unit">lümen (lux)</div>
+      <div class="light-bar-wrap">
+        <div class="light-bar" id="light-bar" style="width:5%"></div>
+      </div>
+    </div>
+
+  </div></div><video id="cam-video" autoplay muted playsinline></video>
+<canvas id="cam-canvas" width="64" height="64"></canvas>
+
+<script>
+let activeModules = { ride: false, mic: false, gyro: false, cam: false };
+let audioCtx, analyser, micStream, camStream;
+let compassAnimFrame;
+let channelCount = 1;
+let compassAngle = 0, targetCompassAngle = 0;
+
+// Dynamic Ride Tracking Vectors
+let isRideActive = false;
+let sessionMaxG = 0;
+let sessionTotalG = 0;
+let sessionCount = 0;
+
+function toggleCheckbox(id) {
+  const checkbox = document.getElementById(id);
+  checkbox.checked = !checkbox.checked;
+}
+
+async function requestSelectedPermissions() {
+  const btn = document.getElementById('start-btn');
+  btn.disabled = true;
+
+  activeModules.ride = document.getElementById('chk-ride').checked;
+  activeModules.mic = document.getElementById('chk-mic').checked;
+  activeModules.gyro = document.getElementById('chk-gyro').checked;
+  activeModules.cam = document.getElementById('chk-cam').checked;
+
+  if (activeModules.ride || activeModules.gyro) {
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+      try {
+        const result = await DeviceOrientationEvent.requestPermission();
+        if (result !== 'granted') {
+          alert('Sensör izni reddedildi.');
+          btn.disabled = false;
+          return;
+        }
+      } catch (e) {
+        alert('İzin başlatılamadı.');
+        btn.disabled = false;
+        return;
+      }
+    }
+  }
+
+  if (activeModules.mic) {
+    try {
+      micStream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+      });
+    } catch (e) {
+      alert('Mikrofon erişimi sağlanamadı.');
+      btn.disabled = false;
+      return;
+    }
+  }
+
+  if (activeModules.cam) {
+    try {
+      camStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' }, width: 64, height: 64 }
+      });
+    } catch (e) {
+      activeModules.cam = false;
+    }
+  }
+
+  launchApp();
+}
+
+function launchApp() {
+  document.getElementById('permission-screen').style.display = 'none';
+  document.getElementById('main-app').style.display = 'block';
+
+  if (activeModules.ride) {
+    document.getElementById('ride-card').style.display = 'block';
+    if (window.DeviceMotionEvent) {
+      window.addEventListener('devicemotion', handleVehicleMotion, true);
+    }
+  }
+  if (activeModules.mic) {
+    document.getElementById('db-card').style.display = 'block';
+    document.getElementById('dir-card').style.display = 'block';
+    initAudio();
+    drawCompass();
+  }
+  if (activeModules.gyro) {
+    document.getElementById('orient-card').style.display = 'block';
+    window.addEventListener('deviceorientation', handleOrientation, true);
+  }
+  if (activeModules.cam) {
+    document.getElementById('light-card').style.display = 'block';
+    initCamera();
+  }
+}
+
+// ─── Vehicle Realtime Graphics & Physics Simulation ─────────────────────────
+function handleVehicleMotion(e) {
+  let acc = e.accelerationIncludingGravity || e.acceleration;
+  if (!acc || acc.x === null) return;
+
+  let rawForce = Math.sqrt(acc.x * acc.x + acc.y * acc.y + acc.z * acc.z);
+  let gForce = rawForce / 9.80665;
+  let netG = Math.abs(gForce - 1.0);
+  
+  // High-pass filter for minor hand jitter
+  if (netG < 0.03) netG = 0;
+
+  document.getElementById('ride-value').textContent = netG.toFixed(2);
+
+  // Animate Vehicle Mesh instantly according to vector forces
+  const vehicle = document.getElementById('vehicle-mesh');
+  const body = document.getElementById('vehicle-body');
+  
+  if (netG > 0) {
+    // Generate chaotic shake offset vectors
+    let shakeX = (Math.random() - 0.5) * netG * 25;
+    let shakeY = (Math.random() - 0.5) * netG * 25;
+    let rotateDeg = (Math.random() - 0.5) * netG * 15;
+    
+    vehicle.style.transform = `translate(${shakeX}px, ${shakeY}px) rotate(${rotateDeg}deg)`;
+    
+    // Dynamic lighting/color threshold alert representation
+    if (netG < 0.15) {
+      body.setAttribute('fill', '#3dd6ac'); // Green - Stable smooth
+    } else if (netG < 0.40) {
+      body.setAttribute('fill', '#f7a26a'); // Orange - Moderate bumper shock
+    } else {
+      body.setAttribute('fill', '#f74a6a'); // Red - Severe impacts
+    }
+  } else {
+    vehicle.style.transform = 'translate(0px, 0px) rotate(0deg)';
+    body.setAttribute('fill', '#7c6af7');
+  }
+
+  // Aggregate metrics if tracking session is active
+  if (isRideActive) {
+    sessionTotalG += netG;
+    sessionCount++;
+    if (netG > sessionMaxG) {
+      sessionMaxG = netG;
+      document.getElementById('ride-peak-label').textContent = `En Yüksek: ${sessionMaxG.toFixed(2)} G`;
+    }
+  }
+}
+
+function toggleRideAnalysis() {
+  const btn = document.getElementById('btn-ride-toggle');
+  const badge = document.getElementById('ride-badge');
+  const label = document.getElementById('ride-label');
+  const feedbackBox = document.getElementById('ride-feedback');
+
+  if (!isRideActive) {
+    // START ANALYSIS
+    isRideActive = true;
+    sessionMaxG = 0;
+    sessionTotalG = 0;
+    sessionCount = 0;
+    
+    feedbackBox.style.display = 'none';
+    badge.textContent = 'CANLI TAKİP';
+    badge.className = 'card-badge badge-active';
+    label.textContent = 'Sürüşünüz anlık olarak simüle ediliyor. Sarsıntıları yukarıda görebilirsiniz.';
+    btn.textContent = 'Sürüşü Bitir ve Raporla';
+    btn.className = 'ride-btn btn-stop';
+  } else {
+    // STOP ANALYSIS & EVALUATE REPORT
+    isRideActive = false;
+    badge.textContent = 'Bitti';
+    badge.className = 'card-badge badge-warn';
+    btn.textContent = 'Yeni Sürüş Başlat';
+    btn.className = 'ride-btn btn-start';
+    label.textContent = 'Sürüş tamamlandı. Analiz aşağıda üretildi.';
+
+    generateRideFeedback();
+  }
+}
+
+function generateRideFeedback() {
+  const feedbackBox = document.getElementById('ride-feedback');
+  const scoreEl = document.getElementById('feedback-score');
+  const textEl = document.getElementById('feedback-text');
+  
+  if (sessionCount === 0) {
+    textEl.textContent = "Sürüş esnasında yeterli hareket verisi toplanamadı. Lütfen telefonu sabit tuttuğunuzdan emin olun.";
+    feedbackBox.style.display = 'block';
+    return;
+  }
+
+  let avgG = sessionTotalG / sessionCount;
+  
+  // Algorithmic Comfort Score out of 100
+  // Higher avg/max shocks decay score exponentially
+  let score = 100 - (avgG * 120) - (sessionMaxG * 45);
+  score = Math.max(10, Math.min(100, Math.round(score)));
+
+  scoreEl.textContent = `Konfor Skoru: %${score}`;
+  feedbackBox.style.display = 'block';
+
+  // Contextual text analysis feedback based on threshold categories
+  if (score >= 85) {
+    textEl.textContent = `Mükemmel konforlu sürüş! Ortalama sarsıntı değeriniz oldukça düşüktü (${avgG.toFixed(2)} G). Amortisörleriniz stabil çalışıyor, pürüzsüz asfalt veya sakin bir sürüş tarzı tercih edilmiş görünüyor.`;
+  } else if (score >= 65) {
+    textEl.textContent = `Standart yol şartları. Sürüş esnasında yer yer hafif dalgalanmalar ve minör sarsıntılar (${sessionMaxG.toFixed(2)} G tepe noktası) kaydedildi. Şehir içi stabil sürüş standartlarına son derece uygun bir profil.`;
+  } else if (score >= 45) {
+    textEl.textContent = `Orta düzeyde sarsıntılı sürüş. Yol yüzeyinde belirgin bozukluklar, parke taşları veya ani hızlanma/yavaşlama tepkileri tespit edildi. Aracın dikey salınımı konfor eşiğini zaman zaman aşmış.`;
+  } else {
+    textEl.textContent = `⚠️ Yüksek sarsıntılı profil! Sürüş boyunca sert şoklar ve yüksek ivmeli dalgalanmalar (Maksimum ${sessionMaxG.toFixed(2)} G) ölçüldü. Yoğun çukurlu arazi şartları, kasis geçişleri veya agresi̇f sürüş manevraları bu sonuca yol açmış olabilir.`;
+  }
+}
+
+// ─── Peripheral Module Drivers (Mic, Orientation, Camera) ─────────────────────
+function initAudio() {
+  if (!micStream) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const source = audioCtx.createMediaStreamSource(micStream);
+  analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 2048;
+  source.connect(analyser);
+  measureAudio();
+}
+
+function measureAudio() {
+  if (!analyser || !activeModules.mic) return;
+  const dataArr = new Float32Array(analyser.frequencyBinCount);
+  analyser.getFloatTimeDomainData(dataArr);
+
+  let sumSq = 0;
+  for (let i = 0; i < dataArr.length; i++) sumSq += dataArr[i] * dataArr[i];
+  const rms = Math.sqrt(sumSq / dataArr.length);
+  const db = rms > 0 ? Math.max(0, Math.min(130, 20 * Math.log10(rms) + 100)) : 0;
+
+  document.getElementById('db-value').textContent = Math.round(db);
+  document.getElementById('db-bar').style.width = ((db / 130) * 100) + '%';
+
+  // Quick mic tracking directional math logic
+  if (rms > 0.002) {
+    let half = Math.floor(dataArr.length / 2), l = 0, r = 0;
+    for (let i = 0; i < half; i++) { l += Math.abs(dataArr[i]); r += Math.abs(dataArr[i+half]); }
+    targetCompassAngle = ((r - l) / (l + r)) * 75;
+    document.getElementById('dir-label').textContent = targetCompassAngle < -15 ? '↖ Ses Sol Önden' : (targetCompassAngle > 15 ? '↗ Ses Sağ Önden' : '↑ Ses Merkezden');
+  }
+  setTimeout(measureAudio, 100);
+}
+
+function drawCompass() {
+  if(!activeModules.mic) return;
+  const canvas = document.getElementById('compass-canvas');
+  const ctx = canvas.getContext('2d');
+  compassAngle += (targetCompassAngle - compassAngle) * 0.1;
+  ctx.clearRect(0,0,180,180);
+  ctx.beginPath(); ctx.arc(90,90,75,0,Math.PI*2); ctx.strokeStyle='rgba(124,106,247,0.15)'; ctx.stroke();
+  ctx.save(); ctx.translate(90,90); ctx.rotate((compassAngle * Math.PI)/180);
+  ctx.beginPath(); ctx.moveTo(0,-55); ctx.lineTo(-7,0); ctx.lineTo(7,0); ctx.closePath(); ctx.fillStyle='#3dd6ac'; ctx.fill(); ctx.restore();
+  compassAnimFrame = requestAnimationFrame(drawCompass);
+}
+
+function handleOrientation(e) {
+  document.getElementById('alpha-val').textContent = Math.round(e.alpha || 0) + '°';
+  document.getElementById('beta-val').textContent = Math.round(e.beta || 0) + '°';
+  document.getElementById('gamma-val').textContent = Math.round(e.gamma || 0) + '°';
+  const isLandscape = Math.abs(e.gamma || 0) > 45;
+  document.getElementById('phone-icon').className = isLandscape ? 'phone-icon landscape' : 'phone-icon';
+  document.getElementById('orient-text').textContent = isLandscape ? 'Yatay' : 'Dikey';
+}
+
+function initCamera() {
+  const video = document.getElementById('cam-video');
+  const canvas = document.getElementById('cam-canvas');
+  if (!camStream) return;
+  video.srcObject = camStream;
+  video.play();
+  video.addEventListener('playing', () => {
+    const ctx = canvas.getContext('2d');
+    function sample() {
+      if (!activeModules.cam || video.readyState < 2) { setTimeout(sample, 200); return; }
+      ctx.drawImage(video, 0, 0, 64, 64);
+      const d = ctx.getImageData(0, 0, 64, 64).data;
+      let lum = 0; for(let i=0; i<d.length; i+=4) { lum += 0.2126*d[i] + 0.7152*d[i+1] + 0.0722*d[i+2]; }
+      let lux = Math.round(Math.pow((lum / (d.length/4))/255, 1.8) * 100000);
+      document.getElementById('light-value').textContent = lux < 1000 ? lux : (lux/1000).toFixed(1) + 'K';
+      document.getElementById('light-bar').style.width = Math.min(100, (Math.log10(lux+1)/5)*100) + '%';
+      setTimeout(sample, 500);
+    }
+    sample();
+  });
+}
+
+function restartApp() {
+  isRideActive = false;
+  if (audioCtx) try { audioCtx.close(); } catch(e){}
+  if (micStream) micStream.getTracks().forEach(t => t.stop());
+  if (camStream) camStream.getTracks().forEach(t => t.stop());
+  if (compassAnimFrame) cancelAnimationFrame(compassAnimFrame);
+  window.removeEventListener('devicemotion', handleVehicleMotion);
+  window.removeEventListener('deviceorientation', handleOrientation);
+
+  document.getElementById('main-app').style.display = 'none';
+  document.getElementById('permission-screen').style.display = 'flex';
+  document.getElementById('start-btn').disabled = false;
+  document.getElementById('ride-feedback').style.display = 'none';
+}
+</script>
+</body>
+</html>
