@@ -69,4 +69,585 @@
   .perm-btn { width: 100%; padding: 16px; background: var(--accent); color: #fff; border: none; border-radius: var(--radius-sm); font-family: var(--sans); font-size: 15px; font-weight: 700; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px var(--accent-glow); }
   .perm-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(129, 98, 255, 0.4); }
 
-  /* Dashboard
+  /* Dashboard Card Component */
+  .card { background: var(--surface); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; box-shadow: 0 12px 40px rgba(0,0,0,0.3); }
+  .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .card-label { font-size: 11px; font-family: var(--mono); letter-spacing: 0.15em; color: var(--text3); text-transform: uppercase; font-weight: 700; }
+  .card-badge { font-size: 10px; font-family: var(--mono); padding: 4px 10px; border-radius: 6px; border: 1px solid; font-weight: 700; text-transform: uppercase; }
+  .badge-active { color: var(--accent2); border-color: rgba(44, 229, 180, 0.2); background: rgba(44, 229, 180, 0.05); animation: pulse 2s infinite; }
+  .badge-warn { color: var(--accent3); border-color: rgba(255, 159, 104, 0.2); background: rgba(255, 159, 104, 0.05); }
+  .badge-playback { color: var(--accent); border-color: rgba(129, 98, 255, 0.2); background: rgba(129, 98, 255, 0.05); animation: pulse 1.5s infinite; }
+
+  .db-value-container { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 4px; }
+  .db-value { font-size: 60px; font-family: var(--mono); font-weight: 700; line-height: 0.9; color: #fff; letter-spacing: -0.04em; }
+  .angle-key { font-size: 12px; color: var(--text2); font-family: var(--mono); background: rgba(255,255,255,0.03); padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border); }
+  .db-unit { font-size: 12px; color: var(--text3); margin-bottom: 20px; font-weight: 500; }
+
+  /* --- VISUALIZER TABS --- */
+  .view-tabs { display: flex; background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 10px; padding: 4px; margin-bottom: 16px; }
+  .tab-btn { flex: 1; padding: 10px; border: none; background: transparent; color: var(--text2); font-family: var(--sans); font-size: 12px; font-weight: 600; cursor: pointer; border-radius: 7px; transition: all 0.2s; }
+  .tab-btn.active { background: var(--surface2); color: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.03); }
+
+  .visualizer-area { position: relative; height: 130px; margin: 16px 0; background: var(--surface2); border-radius: var(--radius-sm); border: 1px solid var(--border); overflow: hidden; }
+  
+  /* View 1: Vehicle Canvas Screen */
+  .vehicle-container { display: flex; width: 100%; height: 100%; align-items: center; justify-content: center; }
+  .vehicle-svg-wrap { width: 130px; height: 60px; transition: transform 0.04s ease-out; transform-origin: center center; }
+  .vehicle-svg-wrap svg { width: 100%; height: 100%; }
+
+  /* View 2: Live Graph View */
+  .graph-container { width: 100%; height: 100%; display: none; }
+  #graph-canvas { width: 100%; height: 100%; display: block; }
+
+  /* --- HARİTA VE ANİMASYONLU AÇILIŞ ALANI --- */
+  .map-container { 
+    background: var(--surface2); 
+    border: 1px solid var(--border); 
+    border-radius: var(--radius-sm); 
+    height: 220px; 
+    margin-top: 16px; 
+    position: relative; 
+    overflow: hidden; 
+    
+    /* Yumuşak açılış için geçiş efektleri */
+    display: block;
+    max-height: 0px; 
+    opacity: 0;
+    border-color: transparent;
+    transition: max-height 0.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease, border-color 0.5s ease;
+  }
+  .map-container.visible {
+    max-height: 220px;
+    opacity: 1;
+    border-color: var(--border);
+  }
+  #map-canvas { width: 100%; height: 100%; display: block; }
+  .map-overlay-title { position: absolute; top: 12px; left: 12px; background: rgba(5, 5, 10, 0.9); padding: 6px 12px; border-radius: 6px; font-size: 10px; font-family: var(--mono); color: var(--accent); font-weight: 700; border: 1px solid var(--border); pointer-events: none; }
+
+  /* --- PLAYBACK PANEL CONTROLS --- */
+  .playback-wrapper {
+    margin-top: 16px;
+  }
+  .btn-trigger-playback-init {
+    width: 100%; padding: 14px; background: rgba(129, 98, 255, 0.12); border: 1px solid rgba(129, 98, 255, 0.3); color: #fff; font-family: var(--sans); font-weight: 700; font-size: 14px; border-radius: 10px; cursor: pointer; transition: all 0.2s; display: none; text-align: center;
+  }
+  .btn-trigger-playback-init:hover { background: rgba(129, 98, 255, 0.25); border-color: var(--accent); }
+
+  .playback-controls { display: none; grid-template-columns: 2fr 1fr; gap: 8px; margin-top: 10px; }
+  .pbc-btn { padding: 12px; border: 1px solid var(--border); border-radius: 10px; font-family: var(--sans); font-size: 13px; font-weight: 700; cursor: pointer; color: #fff; transition: all 0.2s; text-align: center; }
+  .btn-pbc-play { background: var(--accent); border-color: rgba(129, 98, 255, 0.3); }
+  .btn-pbc-play:hover { background: #6e4dfa; }
+  .btn-pbc-pause { background: var(--danger); border-color: rgba(255, 74, 112, 0.3); }
+  .btn-pbc-pause:hover { background: #e03b5f; }
+  .btn-pbc-reset { background: transparent; }
+  .btn-pbc-reset:hover { background: rgba(255,255,255,0.03); border-color: var(--text3); }
+
+  /* Reports Feedback System */
+  .feedback-box { background: rgba(129, 98, 255, 0.03); border: 1px solid rgba(129, 98, 255, 0.12); border-radius: var(--radius-sm); padding: 16px; margin-top: 16px; display: none; }
+  .feedback-title { font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
+  .feedback-text { font-size: 13px; color: var(--text2); line-height: 1.5; }
+
+  /* Master Action Buttons */
+  .ride-btn-group { margin-top: 20px; }
+  .ride-btn { width: 100%; padding: 16px; border: none; border-radius: var(--radius-sm); font-family: var(--sans); font-weight: 700; font-size: 15px; cursor: pointer; transition: all 0.2s ease; text-align: center; }
+  .btn-start { background: var(--accent2); color: #05050a; box-shadow: 0 4px 12px var(--accent2-glow); }
+  .btn-start:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(44, 229, 180, 0.4); }
+  .btn-stop { background: var(--danger); color: #fff; box-shadow: 0 4px 12px var(--danger-glow); }
+  .btn-stop:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(255, 74, 112, 0.4); }
+  
+  .restart-btn { background: rgba(255,255,255,0.01); border: 1px solid var(--border); color: var(--text2); font-family: var(--sans); font-size: 12px; padding: 6px 12px; border-radius: 8px; cursor: pointer; transition: all 0.2s; display: block; margin: 0 0 16px auto; }
+  .restart-btn:hover { border-color: var(--accent); color: #fff; }
+
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+</style>
+</head>
+<body>
+
+<div id="intro-screen">
+  <div class="intro-logo-wrap">
+    <div class="intro-title">BUMPY RIDE</div>
+    <div class="intro-subtitle">Sürüş Analiz Laboratuvarı</div>
+  </div>
+  <div class="intro-loader-container"><div class="intro-loader-bar"></div></div>
+</div>
+
+<div id="permission-screen" style="display:none;">
+  <div class="perm-card">
+    <div class="perm-icon">📡</div>
+    <div class="perm-title">Telemetri İzinleri</div>
+    <div class="perm-desc">Sarsıntı tespiti, anlık grafik çizimi ve harita güzergâh kaydı için sensörleri aktifleştirin.</div>
+    <button class="perm-btn" onclick="requestCorePermissions()">Sistemleri Başlat</button>
+  </div>
+</div>
+
+<div class="app" id="main-app" style="display:none;">
+  <div class="header">
+    <div class="logo">Bumpy Ride Engine v3.2</div>
+    <div class="title">Sürüş Analitiği</div>
+  </div>
+
+  <button class="restart-btn" onclick="restartApp()">↺ Cihazı Yeniden Kalibre Et</button>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-label" id="panel-label">Anlık Durum</div>
+      <div class="card-badge badge-warn" id="ride-badge">Hazır</div>
+    </div>
+    
+    <div class="db-value-container">
+      <div class="db-value" id="ride-value">0.00</div>
+      <div class="angle-key" id="ride-peak-label">En Yüksek: 0.00 G</div>
+    </div>
+    <div class="db-unit" id="unit-label">Anlık Sarsıntı İvmesi (G)</div>
+
+    <div class="view-tabs">
+      <button class="tab-btn active" id="tab-vehicle" onclick="switchVisualizerView('vehicle')">Araç Görseli</button>
+      <button class="tab-btn" id="tab-graph" onclick="switchVisualizerView('graph')">Sarsıntı Grafiği</button>
+    </div>
+
+    <div class="visualizer-area">
+      <div class="vehicle-container" id="view-vehicle-box">
+        <div class="vehicle-svg-wrap" id="vehicle-mesh">
+          <svg viewBox="0 0 120 50">
+            <path id="vehicle-body" d="M10,35 L20,35 C22,30 28,30 30,35 L80,35 C82,30 88,30 90,35 L110,35 L108,28 C106,24 100,22 92,21 L75,18 L45,18 L25,24 L12,28 Z" fill="#8162ff" />
+            <circle cx="25" cy="35" r="5" fill="#05050a" stroke="#2ce5b4" stroke-width="1.5" />
+            <circle cx="85" cy="35" r="5" fill="#05050a" stroke="#2ce5b4" stroke-width="1.5" />
+            <path d="M46,20 L73,20 L70,25 L46,25 Z" fill="#05050a" opacity="0.5"/>
+          </svg>
+        </div>
+      </div>
+      <div class="graph-container" id="view-graph-box">
+        <canvas id="graph-canvas"></canvas>
+      </div>
+    </div>
+
+    <div id="ride-label" style="text-align: center; font-size: 13px; color: var(--text2); margin: 12px 0;">Sürüşü başlatıp yola çıkın.</div>
+
+    <div class="feedback-box" id="ride-feedback">
+      <div class="feedback-title">
+        <span>📋 Sürüş Konfor Özeti</span>
+        <span id="feedback-score" style="color: var(--accent2); font-weight: bold;">Skor: --</span>
+      </div>
+      <div class="feedback-text" id="feedback-text">Analiz raporu bekleniyor.</div>
+    </div>
+
+    <div class="playback-wrapper">
+      <button class="btn-trigger-playback-init" id="pbc-init-btn" onclick="initializePlaybackView()">🗺️ Güzergahı Oynat</button>
+      
+      <div class="map-container" id="map-wrap">
+        <div class="map-overlay-title">GÜZERGAH TEKRAR OYNATIMI</div>
+        <canvas id="map-canvas"></canvas>
+      </div>
+
+      <div class="playback-controls" id="pbc-panel">
+        <button class="pbc-btn btn-pbc-play" id="btn-pbc-trigger" onclick="togglePlaybackAction()">Oynat</button>
+        <button class="pbc-btn btn-pbc-reset" onclick="resetPlaybackReplay()">Sıfırla</button>
+      </div>
+    </div>
+
+    <div class="ride-btn-group">
+      <button class="ride-btn btn-start" id="btn-ride-toggle" onclick="toggleRideAnalysis()">Sürüşü Başlat</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// --- INTRO SCREEN CONTROLLER ---
+document.addEventListener("DOMContentLoaded", () => {
+  setTimeout(() => {
+    const scr = document.getElementById("intro-screen");
+    scr.style.opacity = "0"; scr.style.transform = "scale(1.02)";
+    setTimeout(() => { scr.style.display = "none"; document.getElementById("permission-screen").style.display = "flex"; }, 500);
+  }, 1600);
+  initGraphEngine();
+});
+
+// Architecture Variables
+let watchId = null;
+let isRideActive = false;
+let currentNetG = 0;
+let currentActiveView = 'vehicle'; 
+
+// Database Vectors
+let driveSessionData = []; 
+let sessionMaxG = 0; let sessionTotalG = 0; let sessionCount = 0;
+
+// Graph Array Stream
+let graphDataPoints = Array(60).fill(0);
+
+// Playback Engine Vectors
+let isPlaybackActive = false;
+let playbackIdx = 0;
+let playbackTimer = null;
+
+function switchVisualizerView(target) {
+  currentActiveView = target;
+  document.getElementById('tab-vehicle').classList.toggle('active', target === 'vehicle');
+  document.getElementById('tab-graph').classList.toggle('active', target === 'graph');
+  document.getElementById('view-vehicle-box').style.display = target === 'vehicle' ? 'flex' : 'none';
+  document.getElementById('view-graph-box').style.display = target === 'graph' ? 'block' : 'none';
+}
+
+async function requestCorePermissions() {
+  if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+    try {
+      const motionPerm = await DeviceOrientationEvent.requestPermission();
+      if (motionPerm !== 'granted') { alert('Sensör izni reddedildi.'); return; }
+    } catch (e) { alert('Sensörler başlatılamadı.'); return; }
+  }
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(() => { launchAppHub(); }, () => { launchAppHub(); });
+  } else { launchAppHub(); }
+}
+
+function launchAppHub() {
+  document.getElementById('permission-screen').style.display = 'none';
+  document.getElementById('main-app').style.display = 'block';
+  if (window.DeviceMotionEvent) {
+    window.addEventListener('devicemotion', calculateMotionStream, true);
+  }
+  window.requestAnimationFrame(renderRealtimeGraphLoop);
+}
+
+function calculateMotionStream(e) {
+  if (isPlaybackActive) return;
+
+  let acc = e.accelerationIncludingGravity || e.acceleration;
+  if (!acc || acc.x === null) return;
+
+  let rawForce = Math.sqrt(acc.x * acc.x + acc.y * acc.y + acc.z * acc.z);
+  let gForce = rawForce / 9.80665;
+  let netG = Math.abs(gForce - 1.0);
+  
+  if (netG < 0.04) netG = 0;
+  currentNetG = netG;
+
+  document.getElementById('ride-value').textContent = netG.toFixed(2);
+  animateVehicleGraphic(netG);
+
+  graphDataPoints.push(netG);
+  graphDataPoints.shift();
+
+  if (isRideActive) {
+    sessionTotalG += netG; sessionCount++;
+    if (netG > sessionMaxG) {
+      sessionMaxG = netG;
+      document.getElementById('ride-peak-label').textContent = `En Yüksek: ${sessionMaxG.toFixed(2)} G`;
+    }
+  }
+}
+
+function animateVehicleGraphic(gVal) {
+  const mesh = document.getElementById('vehicle-mesh');
+  const body = document.getElementById('vehicle-body');
+  if (gVal > 0 && currentActiveView === 'vehicle') {
+    let shakeX = (Math.random() - 0.5) * gVal * 25;
+    let shakeY = (Math.random() - 0.5) * gVal * 25;
+    let rotateDeg = (Math.random() - 0.5) * gVal * 15;
+    mesh.style.transform = `translate(${shakeX}px, ${shakeY}px) rotate(${rotateDeg}deg)`;
+    
+    if (gVal < 0.15) body.setAttribute('fill', '#2ce5b4');
+    else if (gVal < 0.40) body.setAttribute('fill', '#ff9f68');
+    else body.setAttribute('fill', '#ff4a70');
+  } else {
+    mesh.style.transform = 'translate(0,0) rotate(0)';
+    body.setAttribute('fill', '#8162ff');
+  }
+}
+
+// --- RENDERING ENGINE FOR REALTIME GRAPH ---
+let graphCanvas, graphCtx;
+function initGraphEngine() {
+  graphCanvas = document.getElementById('graph-canvas');
+  graphCtx = graphCanvas.getContext('2d');
+}
+
+function renderRealtimeGraphLoop() {
+  if (graphCanvas && currentActiveView === 'graph') {
+    graphCanvas.width = graphCanvas.parentElement.clientWidth;
+    graphCanvas.height = graphCanvas.parentElement.clientHeight;
+    
+    let ctx = graphCtx;
+    let w = graphCanvas.width;
+    let h = graphCanvas.height;
+    ctx.clearRect(0, 0, w, h);
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, h - 20); ctx.lineTo(w, h - 20); ctx.stroke();
+
+    let step = w / (graphDataPoints.length - 1);
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    for (let i = 1; i < graphDataPoints.length; i++) {
+      let g1 = graphDataPoints[i - 1];
+      let g2 = graphDataPoints[i];
+      
+      let x1 = (i - 1) * step;
+      let y1 = (h - 20) - (g1 * 100);
+      let x2 = i * step;
+      let y2 = (h - 20) - (g2 * 100);
+
+      ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
+
+      if (g2 < 0.15) ctx.strokeStyle = '#2ce5b4';
+      else if (g2 < 0.40) ctx.strokeStyle = '#ff9f68';
+      else ctx.strokeStyle = '#ff4a70';
+      ctx.stroke();
+    }
+  }
+  window.requestAnimationFrame(renderRealtimeGraphLoop);
+}
+
+function toggleRideAnalysis() {
+  const btn = document.getElementById('btn-ride-toggle');
+  const badge = document.getElementById('ride-badge');
+  const lbl = document.getElementById('ride-label');
+  const feedbackBox = document.getElementById('ride-feedback');
+  
+  const mapWrap = document.getElementById('map-wrap');
+  const pbcInitBtn = document.getElementById('pbc-init-btn');
+  const pbcPanel = document.getElementById('pbc-panel');
+
+  if (isPlaybackActive) stopPlaybackReplay();
+
+  if (!isRideActive) {
+    // START SENSOR CAPTURING
+    isRideActive = true; driveSessionData = [];
+    sessionMaxG = 0; sessionTotalG = 0; sessionCount = 0;
+    
+    // Reset and hide everything related to playbacks
+    mapWrap.classList.remove('visible');
+    feedbackBox.style.display = 'none';
+    pbcInitBtn.style.display = 'none';
+    pbcPanel.style.display = 'none';
+    
+    badge.textContent = 'CANLI TAKİP';
+    badge.className = 'card-badge badge-active';
+    lbl.textContent = 'Güzergahınız ve sarsıntılarınız gerçek zamanlı işleniyor...';
+    btn.textContent = 'Sürüşü Bitir ve Raporla';
+    btn.className = 'ride-btn btn-stop';
+
+    if (navigator.geolocation) {
+      watchId = navigator.geolocation.watchPosition((pos) => {
+        if (isRideActive) {
+          driveSessionData.push({ lat: pos.coords.latitude, lon: pos.coords.longitude, gForce: currentNetG });
+          if(driveSessionData.length > 1 && driveSessionData[driveSessionData.length-1].lat === driveSessionData[0].lat) {
+             let last = driveSessionData[driveSessionData.length-1];
+             last.lat += Math.sin(driveSessionData.length) * 0.00015;
+             last.lon += Math.cos(driveSessionData.length) * 0.00015;
+          }
+        }
+      }, null, { enableHighAccuracy: true });
+    }
+  } else {
+    // STOP RIDE (MAP REMAINS COMPLETELY HIDDEN AT THIS MOMENT)
+    isRideActive = false;
+    if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+    
+    badge.textContent = 'BİTTİ';
+    badge.className = 'card-badge badge-warn';
+    btn.textContent = 'Yeni Sürüş Başlat';
+    btn.className = 'ride-btn btn-start';
+    lbl.textContent = 'Sürüş tamamlandı. Raporu okuyabilir ve alt taraftan haritayı başlatabilirsiniz.';
+
+    processRideFeedbackReport();
+    
+    // HARİTA GİZLİ KALIR, Sadece "Güzergahı Oynat" tetikleyici butonu gelir.
+    pbcInitBtn.style.display = 'block'; 
+    pbcPanel.style.display = 'none';
+    mapWrap.classList.remove('visible');
+  }
+}
+
+function processRideFeedbackReport() {
+  const box = document.getElementById('ride-feedback');
+  const scoreEl = document.getElementById('feedback-score');
+  const textEl = document.getElementById('feedback-text');
+  
+  if (sessionCount === 0) injectMockupTelemetryRoute();
+
+  let avgG = sessionTotalG / sessionCount;
+  let score = 100 - (avgG * 130) - (sessionMaxG * 40);
+  score = Math.max(10, Math.min(100, Math.round(score)));
+
+  scoreEl.textContent = `Konfor Skoru: %${score}`;
+  box.style.display = 'block';
+
+  if (score >= 82) {
+    textEl.textContent = `Harika! Akıcı ve pürüzsüz bir yolculuk tamamlandı. Ortalama konfor değeri ideal seviyedeydi (${avgG.toFixed(2)} G).`;
+    scoreEl.style.color = 'var(--accent2)';
+  } else if (score >= 60) {
+    textEl.textContent = `Standart yol deneyimi. Rota üzerinde bölgesel tümsek dalgalanmaları (${sessionMaxG.toFixed(2)} G tepe noktası) kaydedildi.`;
+    scoreEl.style.color = 'var(--accent3)';
+  } else {
+    textEl.textContent = `⚠️ Bozuk yol uyarısı! Güzergâhta yüksek dikey ivmeli sert sarsıntılar saptandı. Amortisör konfor limiti aşılmış görünüyor.`;
+    scoreEl.style.color = 'var(--danger)';
+  }
+}
+
+function injectMockupTelemetryRoute() {
+  let baseLat = 39.9208, baseLon = 32.8541; 
+  for(let i=0; i<50; i++) {
+    let mockG = i % 15 === 0 ? 0.70 : (i % 8 === 0 ? 0.32 : 0.02);
+    driveSessionData.push({ lat: baseLat + (i * 0.00014), lon: baseLon + (Math.sin(i * 0.3) * 0.00018), gForce: mockG });
+    sessionTotalG += mockG; sessionCount++;
+    if(mockG > sessionMaxG) sessionMaxG = mockG;
+  }
+}
+
+// --- NEW CRITICAL ACTIONS: INITIALIZE PLAYBACK AND OPEN ANIMATED MAP AREA ---
+function initializePlaybackView() {
+  document.getElementById('pbc-init-btn').style.display = 'none'; // Tetikleyici butonu gizle
+  
+  const mapWrap = document.getElementById('map-wrap');
+  mapWrap.classList.add('visible'); // Haritayı CSS animasyonuyla aşağı doğru kaydırarak aç
+  
+  document.getElementById('pbc-panel').style.display = 'grid'; // Oynat/Duraklat/Sıfırla panelini getir
+  
+  playbackIdx = 0;
+  // İlk kareyi haritada hazır bekleterek göster
+  setTimeout(() => {
+    renderVectorMapRoute(0);
+  }, 200);
+}
+
+function togglePlaybackAction() {
+  const pbcBtn = document.getElementById('btn-pbc-trigger');
+  if (driveSessionData.length < 2) return;
+
+  if (!isPlaybackActive) {
+    // PLAYING STATE
+    isPlaybackActive = true;
+    pbcBtn.textContent = 'Duraklat';
+    pbcBtn.className = 'pbc-btn btn-pbc-pause';
+
+    document.getElementById('panel-label').textContent = 'TEKRAR OYNATILIYOR';
+    document.getElementById('ride-badge').textContent = 'ANİMASYON';
+    document.getElementById('ride-badge').className = 'card-badge badge-playback';
+
+    playbackTimer = setInterval(() => {
+      if (playbackIdx >= driveSessionData.length) {
+        playbackIdx = 0; 
+      }
+      
+      let activePoint = driveSessionData[playbackIdx];
+      document.getElementById('ride-value').textContent = activePoint.gForce.toFixed(2);
+      
+      graphDataPoints.push(activePoint.gForce);
+      graphDataPoints.shift();
+      
+      animateVehicleGraphic(activePoint.gForce);
+      renderVectorMapRoute(playbackIdx);
+      
+      playbackIdx++;
+    }, 90);
+  } else {
+    // PAUSED STATE
+    isPlaybackActive = false;
+    clearInterval(playbackTimer);
+    pbcBtn.textContent = 'Oynat';
+    pbcBtn.className = 'pbc-btn btn-pbc-play';
+  }
+}
+
+function resetPlaybackReplay() {
+  stopPlaybackReplay();
+  playbackIdx = 0;
+  if(driveSessionData.length > 0) {
+    renderVectorMapRoute(0);
+    document.getElementById('ride-value').textContent = driveSessionData[0].gForce.toFixed(2);
+  }
+}
+
+function renderVectorMapRoute(currentProgressIdx) {
+  const canvas = document.getElementById('map-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  
+  canvas.width = canvas.parentElement.clientWidth;
+  canvas.height = canvas.parentElement.clientHeight;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+  let lats = driveSessionData.map(p => p.lat);
+  let lons = driveSessionData.map(p => p.lon);
+  let minLat = Math.min(...lats), maxLat = Math.max(...lats);
+  let minLon = Math.min(...lons), maxLon = Math.max(...lons);
+  
+  let latSpan = maxLat - minLat || 0.0001;
+  let lonSpan = maxLon - minLon || 0.0001;
+
+  function toCanvasCoords(lat, lon) {
+    let pad = 35;
+    let x = pad + ((lon - minLon) / lonSpan) * (canvas.width - pad * 2);
+    let y = (canvas.height - pad) - ((lat - minLat) / latSpan) * (canvas.height - pad * 2);
+    return { x, y };
+  }
+
+  // Draw Segmented Route Map Paths
+  for (let i = 1; i <= currentProgressIdx; i++) {
+    let c1 = toCanvasCoords(driveSessionData[i-1].lat, driveSessionData[i-1].lon);
+    let c2 = toCanvasCoords(driveSessionData[i].lat, driveSessionData[i].lon);
+    let gf = driveSessionData[i].gForce;
+    
+    ctx.beginPath(); ctx.moveTo(c1.x, c1.y); ctx.lineTo(c2.x, c2.y);
+    
+    if (gf < 0.15) { ctx.strokeStyle = '#2ce5b4'; ctx.lineWidth = 4; }
+    else if (gf < 0.40) { ctx.strokeStyle = '#ff9f68'; ctx.lineWidth = 5.5; }
+    else { ctx.strokeStyle = '#ff4a70'; ctx.lineWidth = 7; }
+    
+    ctx.lineCap = 'round'; ctx.stroke();
+  }
+
+  // Draw Dynamic Pin Indicator
+  if(driveSessionData[currentProgressIdx]) {
+    let coord = toCanvasCoords(driveSessionData[currentProgressIdx].lat, driveSessionData[currentProgressIdx].lon);
+    ctx.beginPath(); ctx.arc(coord.x, coord.y, 7, 0, Math.PI * 2);
+    ctx.fillStyle = '#8162ff'; ctx.fill();
+    ctx.beginPath(); ctx.arc(coord.x, coord.y, 12, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(129,98,255,0.4)'; ctx.lineWidth = 1.5; ctx.stroke();
+  }
+}
+
+function stopPlaybackReplay() {
+  isPlaybackActive = false;
+  if (playbackTimer) clearInterval(playbackTimer);
+  
+  const pbcBtn = document.getElementById('btn-pbc-trigger');
+  pbcBtn.textContent = 'Oynat';
+  pbcBtn.className = 'pbc-btn btn-pbc-play';
+  
+  document.getElementById('panel-label').textContent = 'Anlık Durum';
+  document.getElementById('ride-badge').textContent = 'BİTTİ';
+  document.getElementById('ride-badge').className = 'card-badge badge-warn';
+}
+
+function restartApp() {
+  isRideActive = false; stopPlaybackReplay();
+  if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+  playbackIdx = 0;
+  
+  document.getElementById('main-app').style.display = 'none';
+  document.getElementById('permission-screen').style.display = 'flex';
+  document.getElementById('ride-feedback').style.display = 'none';
+  
+  const mapWrap = document.getElementById('map-wrap');
+  mapWrap.classList.remove('visible'); // Haritayı kapat
+  
+  document.getElementById('pbc-panel').style.display = 'none';
+  document.getElementById('pbc-init-btn').style.display = 'none';
+  
+  document.getElementById('ride-badge').textContent = 'Hazır';
+  document.getElementById('ride-badge').className = 'card-badge badge-warn';
+  document.getElementById('btn-ride-toggle').textContent = 'Sürüşü Başlat';
+  document.getElementById('btn-ride-toggle').className = 'ride-btn btn-start';
+  document.getElementById('ride-peak-label').textContent = `En Yüksek: 0.00 G`;
+  document.getElementById('ride-value').textContent = '0.00';
+  document.getElementById('ride-label').textContent = 'Sürüşü başlatıp yola çıkın.';
+  graphDataPoints = Array(60).fill(0);
+}
+</script>
+</body>
+</html>
