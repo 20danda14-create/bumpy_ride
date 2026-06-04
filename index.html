@@ -3,27 +3,27 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Bumpy Ride — Elegan Sürüş Analitiği</title>
+<title>SensörHub — Ses & Işık Analizi</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #06060a;
-    --surface: #0d0d14;
-    --surface2: #141420;
-    --border: rgba(255,255,255,0.06);
-    --accent: #6d5dfc;
-    --accent2: #2ecc71;
-    --accent3: #e67e22;
-    --text: #f4f4f9;
-    --text2: rgba(244,244,249,0.6);
-    --text3: rgba(244,244,249,0.3);
-    --danger: #e74c3c;
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface2: #1a1a26;
+    --border: rgba(255,255,255,0.08);
+    --accent: #7c6af7;
+    --accent2: #3dd6ac;
+    --accent3: #f7a26a;
+    --text: #f0eeff;
+    --text2: rgba(240,238,255,0.55);
+    --text3: rgba(240,238,255,0.3);
+    --danger: #f74a6a;
     --mono: 'Space Mono', monospace;
     --sans: 'Syne', sans-serif;
-    --radius: 20px;
-    --radius-sm: 10px;
+    --radius: 16px;
+    --radius-sm: 8px;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -41,76 +41,26 @@
     position: fixed;
     inset: 0;
     background-image:
-      linear-gradient(rgba(109,93,252,0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(109,93,252,0.03) 1px, transparent 1px);
-    background-size: 50px 50px;
+      linear-gradient(rgba(124,106,247,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(124,106,247,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
     pointer-events: none;
     z-index: 0;
   }
 
-  /* --- INTRO SCREEN --- */
-  #intro-screen {
-    position: fixed;
-    inset: 0;
-    background: var(--bg);
-    z-index: 200;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 24px;
-    transition: opacity 0.6s ease, transform 0.6s ease;
-  }
-
-  .intro-logo-wrap {
-    animation: introPulse 1.5s ease-in-out infinite alternate;
-    margin-bottom: 24px;
-    text-align: center;
-  }
-
-  @keyframes introPulse {
-    0% { transform: translateY(0); opacity: 0.8; }
-    100% { transform: translateY(-4px); opacity: 1; }
-  }
-
-  .intro-title {
-    font-size: 38px;
-    font-weight: 800;
-    letter-spacing: -0.02em;
-    background: linear-gradient(135deg, var(--text) 40%, var(--accent) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
-
-  .intro-subtitle {
-    font-size: 10px;
-    font-family: var(--mono);
-    color: var(--accent2);
-    letter-spacing: 0.4em;
-    text-transform: uppercase;
-    margin-top: 12px;
-  }
-
-  .intro-loader-container {
-    width: 160px;
-    height: 2px;
-    background: rgba(255,255,255,0.04);
-    border-radius: 1px;
-    margin-top: 32px;
+  .app {
     position: relative;
-    overflow: hidden;
+    z-index: 1;
+    max-width: 520px;
+    margin: 0 auto;
+    padding: 24px 16px 48px;
   }
 
-  .intro-loader-bar {
-    position: absolute;
-    height: 100%; width: 0%;
-    background: var(--accent);
-    animation: fillLoader 1.8s cubic-bezier(0.1, 0.85, 0.25, 1) forwards;
-  }
+  .header { text-align: center; margin-bottom: 32px; }
+  .logo { font-size: 11px; font-family: var(--mono); letter-spacing: 0.3em; color: var(--accent); text-transform: uppercase; margin-bottom: 8px; opacity: 0.9; }
+  .title { font-size: 32px; font-weight: 800; line-height: 1.1; background: linear-gradient(135deg, var(--text) 0%, var(--accent) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 8px; }
+  .subtitle { font-size: 13px; color: var(--text2); font-family: var(--mono); }
 
-  @keyframes fillLoader { 0% { width: 0%; } 100% { width: 100%; } }
-
-  /* --- PERMISSION SCREEN --- */
   #permission-screen {
     position: fixed;
     inset: 0;
@@ -122,37 +72,136 @@
     padding: 24px;
   }
 
-  .perm-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 40px 32px;
-    max-width: 420px;
-    width: 100%;
-    text-align: center;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+  .perm-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 32px 24px; max-width: 400px; width: 100%; text-align: center; }
+  .perm-icon { width: 64px; height: 64px; border-radius: 50%; background: rgba(124,106,247,0.12); border: 1px solid rgba(124,106,247,0.3); display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 28px; }
+  .perm-title { font-size: 22px; font-weight: 800; margin-bottom: 8px; }
+  .perm-desc { font-size: 14px; color: var(--text2); line-height: 1.6; margin-bottom: 24px; font-family: var(--mono); }
+  .perm-list { list-style: none; margin-bottom: 28px; text-align: left; }
+  .perm-list li { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; font-family: var(--mono); color: var(--text2); padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .perm-list li:last-child { border-bottom: none; }
+  .perm-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 4px; flex-shrink: 0; }
+  .dot-mic { background: var(--accent); }
+  .dot-cam { background: var(--accent2); }
+  .dot-gyro { background: var(--accent3); }
+
+  .perm-btn { width: 100%; padding: 16px; background: var(--accent); color: #fff; border: none; border-radius: var(--radius-sm); font-family: var(--sans); font-size: 16px; font-weight: 600; cursor: pointer; transition: opacity 0.2s, transform 0.1s; letter-spacing: 0.02em; }
+  .perm-btn:hover { opacity: 0.88; }
+  .perm-btn:active { transform: scale(0.98); }
+  
+  .perm-status { margin-top: 12px; font-size: 12px; font-family: var(--mono); color: var(--text3); min-height: 20px; }
+  .perm-status.error { color: var(--danger); }
+  .perm-status.success { color: var(--accent2); }
+
+  .status-bar { display: flex; align-items: center; justify-content: space-between; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 16px; margin-bottom: 20px; font-size: 12px; font-family: var(--mono); }
+  .status-indicator { display: flex; align-items: center; gap: 6px; color: var(--text2); }
+  .pulse-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent2); animation: pulse 1.8s infinite; }
+
+  @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.8); } }
+
+  .restart-btn { background: none; border: 1px solid var(--border); color: var(--text2); font-family: var(--mono); font-size: 11px; padding: 4px 10px; border-radius: 4px; cursor: pointer; transition: all 0.15s; }
+  .restart-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  .grid { display: grid; gap: 16px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; transition: border-color 0.3s; }
+  .card:hover { border-color: rgba(124,106,247,0.25); }
+  .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .card-label { font-size: 11px; font-family: var(--mono); letter-spacing: 0.15em; color: var(--text3); text-transform: uppercase; }
+  .card-badge { font-size: 10px; font-family: var(--mono); padding: 3px 8px; border-radius: 4px; border: 1px solid; }
+  .badge-active { color: var(--accent2); border-color: rgba(61,214,172,0.3); background: rgba(61,214,172,0.08); }
+  .badge-warn { color: var(--accent3); border-color: rgba(247,162,106,0.3); background: rgba(247,162,106,0.08); }
+
+  .db-value { font-size: 64px; font-family: var(--mono); font-weight: 700; line-height: 1; margin-bottom: 4px; transition: color 0.3s; }
+  .db-unit { font-size: 13px; font-family: var(--mono); color: var(--text3); margin-bottom: 16px; }
+  .db-bar-wrap { height: 8px; background: var(--surface2); border-radius: 4px; overflow: hidden; margin-bottom: 12px; }
+  .db-bar { height: 100%; border-radius: 4px; transition: width 0.1s ease-out; background: linear-gradient(90deg, var(--accent2) 0%, var(--accent) 60%, var(--danger) 100%); }
+  .db-scale { display: flex; justify-content: space-between; font-size: 10px; font-family: var(--mono); color: var(--text3); }
+  .db-label { font-size: 12px; font-family: var(--mono); color: var(--text2); margin-top: 8px; }
+
+  .direction-visual { display: flex; align-items: center; justify-content: center; padding: 16px 0 8px; }
+  .compass-wrap { position: relative; width: 180px; height: 180px; }
+  #compass-canvas { width: 180px; height: 180px; }
+
+  .orientation-display { display: flex; align-items: center; justify-content: center; gap: 24px; padding: 8px 0; }
+  .orient-phone { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .phone-icon { width: 44px; height: 70px; border: 2px solid var(--accent); border-radius: 8px; background: var(--surface2); position: relative; transition: transform 0.4s ease; }
+  .phone-icon.landscape { transform: rotate(-90deg); }
+  .phone-icon::before { content: ''; position: absolute; top: 5px; left: 50%; transform: translateX(-50%); width: 10px; height: 2px; border-radius: 1px; background: var(--accent); opacity: 0.5; }
+  .phone-icon::after { content: ''; position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%); width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--accent); opacity: 0.4; }
+  .orient-label { font-size: 12px; font-family: var(--mono); color: var(--text2); text-align: center; }
+  .orient-status { font-size: 22px; font-weight: 800; color: var(--accent); }
+
+  .angles-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 16px; }
+  .angle-item { background: var(--surface2); border-radius: var(--radius-sm); padding: 10px 8px; text-align: center; }
+  .angle-key { font-size: 10px; font-family: var(--mono); color: var(--text3); text-transform: uppercase; margin-bottom: 4px; }
+  .angle-val { font-size: 18px; font-family: var(--mono); font-weight: 700; color: var(--accent3); }
+
+  .light-value { font-size: 56px; font-family: var(--mono); font-weight: 700; line-height: 1; margin-bottom: 4px; color: var(--accent3); }
+  .light-unit { font-size: 13px; font-family: var(--mono); color: var(--text3); margin-bottom: 16px; }
+  .light-bar-wrap { height: 8px; background: var(--surface2); border-radius: 4px; overflow: hidden; margin-bottom: 12px; }
+  .light-bar { height: 100%; border-radius: 4px; transition: width 0.4s ease; background: linear-gradient(90deg, #3a2a00 0%, var(--accent3) 60%, #fff5aa 100%); }
+  .light-label { font-size: 12px; font-family: var(--mono); color: var(--text2); margin-top: 8px; }
+  .light-note { font-size: 11px; font-family: var(--mono); color: var(--text3); margin-top: 4px; line-height: 1.5; }
+
+  #cam-video { display: none; }
+  #cam-canvas { display: none; }
+  .warn-box { background: rgba(247,74,106,0.08); border: 1px solid rgba(247,74,106,0.25); border-radius: var(--radius-sm); padding: 12px 16px; font-size: 12px; font-family: var(--mono); color: #f7a0b0; line-height: 1.6; margin-top: 8px; }
+
+  @media (min-width: 400px) {
+    .db-value { font-size: 80px; }
+    .light-value { font-size: 72px; }
   }
+</style>
+</head>
+<body>
 
-  .perm-icon {
-    font-size: 32px; margin-bottom: 20px; opacity: 0.9;
-  }
+<div id="permission-screen">
+  <div class="perm-card">
+    <div class="perm-icon">🎙️</div>
+    <div class="perm-title">İzinler Gerekli</div>
+    <div class="perm-desc">Uygulama her açılışta izin ister. Aşağıdaki özelliklere erişim gereklidir:</div>
+    <ul class="perm-list">
+      <li>
+        <span class="perm-dot dot-mic"></span>
+        <div><strong>Mikrofon</strong><br>Ses yönü ve desibel ölçümü için</div>
+      </li>
+      <li>
+        <span class="perm-dot dot-cam"></span>
+        <div><strong>Kamera</strong><br>Ortam aydınlık düzeyi analizi için</div>
+      </li>
+      <li>
+        <span class="perm-dot dot-gyro"></span>
+        <div><strong>Hareket Sensörü</strong><br>Telefon yönü (dikey/yatay) için</div>
+      </li>
+    </ul>
+    <button class="perm-btn" id="start-btn" onclick="requestPermissions()">
+      İzinleri Ver ve Başlat
+    </button>
+    <div class="perm-status" id="perm-status">Hazır — başlatmak için butona bas</div>
+  </div>
+</div>
 
-  .perm-title { font-size: 24px; font-weight: 600; margin-bottom: 12px; letter-spacing: -0.01em; }
-  .perm-desc { font-size: 13px; color: var(--text2); line-height: 1.6; margin-bottom: 24px; }
+<div class="app" id="main-app" style="display:none;">
+  <div class="header">
+    <div class="logo">SensörHub</div>
+    <div class="title">Ses & Işık<br>Analizi</div>
+    <div class="subtitle">Gerçek zamanlı sensör verisi</div>
+  </div>
 
-  .perm-notice-box {
-    background: rgba(255,255,255,0.02);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 14px;
-    font-size: 11px;
-    color: var(--text2);
-    text-align: left;
-    margin-bottom: 24px;
-    font-family: var(--mono);
-    line-height: 1.6;
-  }
+  <div class="status-bar">
+    <div class="status-indicator">
+      <div class="pulse-dot"></div>
+      <span>Aktif — sensörler çalışıyor</span>
+    </div>
+    <button class="restart-btn" onclick="restartApp()">↺ Yeniden Başlat</button>
+  </div>
 
-  .gps-warning {
-    background: rgba(231, 76, 60, 0.08);
-    border:
+  <div class="grid">
+    <div class="card" id="db-card">
+      <div class="card-header">
+        <div class="card-label">🎙 Ses Şiddeti</div>
+        <div class="card-badge badge-active" id="db-badge">Dinleniyor</div>
+      </div>
+      <div class="db-value" id="db-value">—</div>
+      <div class="db-unit">desibel (dB)</div>
+      <div class="db-bar-wrap">
+        <div class="db-bar" id
