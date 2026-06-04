@@ -3,27 +3,27 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>SensörHub — Ses & Işık Analizi</title>
+<title>Bumpy Ride — Elegan Sürüş Analitiği</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0a0a0f;
-    --surface: #12121a;
-    --surface2: #1a1a26;
-    --border: rgba(255,255,255,0.08);
-    --accent: #7c6af7;
-    --accent2: #3dd6ac;
-    --accent3: #f7a26a;
-    --text: #f0eeff;
-    --text2: rgba(240,238,255,0.55);
-    --text3: rgba(240,238,255,0.3);
-    --danger: #f74a6a;
+    --bg: #06060a;
+    --surface: #0d0d14;
+    --surface2: #141420;
+    --border: rgba(255,255,255,0.06);
+    --accent: #6d5dfc;
+    --accent2: #2ecc71;
+    --accent3: #e67e22;
+    --text: #f4f4f9;
+    --text2: rgba(244,244,249,0.6);
+    --text3: rgba(244,244,249,0.3);
+    --danger: #e74c3c;
     --mono: 'Space Mono', monospace;
     --sans: 'Syne', sans-serif;
-    --radius: 16px;
-    --radius-sm: 8px;
+    --radius: 20px;
+    --radius-sm: 10px;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -41,26 +41,76 @@
     position: fixed;
     inset: 0;
     background-image:
-      linear-gradient(rgba(124,106,247,0.04) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(124,106,247,0.04) 1px, transparent 1px);
-    background-size: 40px 40px;
+      linear-gradient(rgba(109,93,252,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(109,93,252,0.03) 1px, transparent 1px);
+    background-size: 50px 50px;
     pointer-events: none;
     z-index: 0;
   }
 
-  .app {
-    position: relative;
-    z-index: 1;
-    max-width: 520px;
-    margin: 0 auto;
-    padding: 24px 16px 48px;
+  /* --- INTRO SCREEN --- */
+  #intro-screen {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    transition: opacity 0.6s ease, transform 0.6s ease;
   }
 
-  .header { text-align: center; margin-bottom: 32px; }
-  .logo { font-size: 11px; font-family: var(--mono); letter-spacing: 0.3em; color: var(--accent); text-transform: uppercase; margin-bottom: 8px; opacity: 0.9; }
-  .title { font-size: 32px; font-weight: 800; line-height: 1.1; background: linear-gradient(135deg, var(--text) 0%, var(--accent) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 8px; }
-  .subtitle { font-size: 13px; color: var(--text2); font-family: var(--mono); }
+  .intro-logo-wrap {
+    animation: introPulse 1.5s ease-in-out infinite alternate;
+    margin-bottom: 24px;
+    text-align: center;
+  }
 
+  @keyframes introPulse {
+    0% { transform: translateY(0); opacity: 0.8; }
+    100% { transform: translateY(-4px); opacity: 1; }
+  }
+
+  .intro-title {
+    font-size: 38px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, var(--text) 40%, var(--accent) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .intro-subtitle {
+    font-size: 10px;
+    font-family: var(--mono);
+    color: var(--accent2);
+    letter-spacing: 0.4em;
+    text-transform: uppercase;
+    margin-top: 12px;
+  }
+
+  .intro-loader-container {
+    width: 160px;
+    height: 2px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 1px;
+    margin-top: 32px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .intro-loader-bar {
+    position: absolute;
+    height: 100%; width: 0%;
+    background: var(--accent);
+    animation: fillLoader 1.8s cubic-bezier(0.1, 0.85, 0.25, 1) forwards;
+  }
+
+  @keyframes fillLoader { 0% { width: 0%; } 100% { width: 100%; } }
+
+  /* --- PERMISSION SCREEN --- */
   #permission-screen {
     position: fixed;
     inset: 0;
@@ -72,136 +122,637 @@
     padding: 24px;
   }
 
-  .perm-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 32px 24px; max-width: 400px; width: 100%; text-align: center; }
-  .perm-icon { width: 64px; height: 64px; border-radius: 50%; background: rgba(124,106,247,0.12); border: 1px solid rgba(124,106,247,0.3); display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 28px; }
-  .perm-title { font-size: 22px; font-weight: 800; margin-bottom: 8px; }
-  .perm-desc { font-size: 14px; color: var(--text2); line-height: 1.6; margin-bottom: 24px; font-family: var(--mono); }
-  .perm-list { list-style: none; margin-bottom: 28px; text-align: left; }
-  .perm-list li { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; font-family: var(--mono); color: var(--text2); padding: 10px 0; border-bottom: 1px solid var(--border); }
-  .perm-list li:last-child { border-bottom: none; }
-  .perm-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 4px; flex-shrink: 0; }
-  .dot-mic { background: var(--accent); }
-  .dot-cam { background: var(--accent2); }
-  .dot-gyro { background: var(--accent3); }
-
-  .perm-btn { width: 100%; padding: 16px; background: var(--accent); color: #fff; border: none; border-radius: var(--radius-sm); font-family: var(--sans); font-size: 16px; font-weight: 600; cursor: pointer; transition: opacity 0.2s, transform 0.1s; letter-spacing: 0.02em; }
-  .perm-btn:hover { opacity: 0.88; }
-  .perm-btn:active { transform: scale(0.98); }
-  
-  .perm-status { margin-top: 12px; font-size: 12px; font-family: var(--mono); color: var(--text3); min-height: 20px; }
-  .perm-status.error { color: var(--danger); }
-  .perm-status.success { color: var(--accent2); }
-
-  .status-bar { display: flex; align-items: center; justify-content: space-between; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 16px; margin-bottom: 20px; font-size: 12px; font-family: var(--mono); }
-  .status-indicator { display: flex; align-items: center; gap: 6px; color: var(--text2); }
-  .pulse-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent2); animation: pulse 1.8s infinite; }
-
-  @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.8); } }
-
-  .restart-btn { background: none; border: 1px solid var(--border); color: var(--text2); font-family: var(--mono); font-size: 11px; padding: 4px 10px; border-radius: 4px; cursor: pointer; transition: all 0.15s; }
-  .restart-btn:hover { border-color: var(--accent); color: var(--accent); }
-
-  .grid { display: grid; gap: 16px; }
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; transition: border-color 0.3s; }
-  .card:hover { border-color: rgba(124,106,247,0.25); }
-  .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
-  .card-label { font-size: 11px; font-family: var(--mono); letter-spacing: 0.15em; color: var(--text3); text-transform: uppercase; }
-  .card-badge { font-size: 10px; font-family: var(--mono); padding: 3px 8px; border-radius: 4px; border: 1px solid; }
-  .badge-active { color: var(--accent2); border-color: rgba(61,214,172,0.3); background: rgba(61,214,172,0.08); }
-  .badge-warn { color: var(--accent3); border-color: rgba(247,162,106,0.3); background: rgba(247,162,106,0.08); }
-
-  .db-value { font-size: 64px; font-family: var(--mono); font-weight: 700; line-height: 1; margin-bottom: 4px; transition: color 0.3s; }
-  .db-unit { font-size: 13px; font-family: var(--mono); color: var(--text3); margin-bottom: 16px; }
-  .db-bar-wrap { height: 8px; background: var(--surface2); border-radius: 4px; overflow: hidden; margin-bottom: 12px; }
-  .db-bar { height: 100%; border-radius: 4px; transition: width 0.1s ease-out; background: linear-gradient(90deg, var(--accent2) 0%, var(--accent) 60%, var(--danger) 100%); }
-  .db-scale { display: flex; justify-content: space-between; font-size: 10px; font-family: var(--mono); color: var(--text3); }
-  .db-label { font-size: 12px; font-family: var(--mono); color: var(--text2); margin-top: 8px; }
-
-  .direction-visual { display: flex; align-items: center; justify-content: center; padding: 16px 0 8px; }
-  .compass-wrap { position: relative; width: 180px; height: 180px; }
-  #compass-canvas { width: 180px; height: 180px; }
-
-  .orientation-display { display: flex; align-items: center; justify-content: center; gap: 24px; padding: 8px 0; }
-  .orient-phone { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-  .phone-icon { width: 44px; height: 70px; border: 2px solid var(--accent); border-radius: 8px; background: var(--surface2); position: relative; transition: transform 0.4s ease; }
-  .phone-icon.landscape { transform: rotate(-90deg); }
-  .phone-icon::before { content: ''; position: absolute; top: 5px; left: 50%; transform: translateX(-50%); width: 10px; height: 2px; border-radius: 1px; background: var(--accent); opacity: 0.5; }
-  .phone-icon::after { content: ''; position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%); width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--accent); opacity: 0.4; }
-  .orient-label { font-size: 12px; font-family: var(--mono); color: var(--text2); text-align: center; }
-  .orient-status { font-size: 22px; font-weight: 800; color: var(--accent); }
-
-  .angles-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 16px; }
-  .angle-item { background: var(--surface2); border-radius: var(--radius-sm); padding: 10px 8px; text-align: center; }
-  .angle-key { font-size: 10px; font-family: var(--mono); color: var(--text3); text-transform: uppercase; margin-bottom: 4px; }
-  .angle-val { font-size: 18px; font-family: var(--mono); font-weight: 700; color: var(--accent3); }
-
-  .light-value { font-size: 56px; font-family: var(--mono); font-weight: 700; line-height: 1; margin-bottom: 4px; color: var(--accent3); }
-  .light-unit { font-size: 13px; font-family: var(--mono); color: var(--text3); margin-bottom: 16px; }
-  .light-bar-wrap { height: 8px; background: var(--surface2); border-radius: 4px; overflow: hidden; margin-bottom: 12px; }
-  .light-bar { height: 100%; border-radius: 4px; transition: width 0.4s ease; background: linear-gradient(90deg, #3a2a00 0%, var(--accent3) 60%, #fff5aa 100%); }
-  .light-label { font-size: 12px; font-family: var(--mono); color: var(--text2); margin-top: 8px; }
-  .light-note { font-size: 11px; font-family: var(--mono); color: var(--text3); margin-top: 4px; line-height: 1.5; }
-
-  #cam-video { display: none; }
-  #cam-canvas { display: none; }
-  .warn-box { background: rgba(247,74,106,0.08); border: 1px solid rgba(247,74,106,0.25); border-radius: var(--radius-sm); padding: 12px 16px; font-size: 12px; font-family: var(--mono); color: #f7a0b0; line-height: 1.6; margin-top: 8px; }
-
-  @media (min-width: 400px) {
-    .db-value { font-size: 80px; }
-    .light-value { font-size: 72px; }
+  .perm-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 40px 32px;
+    max-width: 420px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
   }
+
+  .perm-icon {
+    font-size: 32px; margin-bottom: 20px; opacity: 0.9;
+  }
+
+  .perm-title { font-size: 24px; font-weight: 600; margin-bottom: 12px; letter-spacing: -0.01em; }
+  .perm-desc { font-size: 13px; color: var(--text2); line-height: 1.6; margin-bottom: 24px; }
+
+  .perm-notice-box {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px;
+    font-size: 11px;
+    color: var(--text2);
+    text-align: left;
+    margin-bottom: 24px;
+    font-family: var(--mono);
+    line-height: 1.6;
+  }
+
+  .gps-warning {
+    background: rgba(231, 76, 60, 0.08);
+    border: 1px solid rgba(231, 76, 60, 0.2);
+    border-radius: var(--radius-sm);
+    padding: 14px;
+    font-size: 12px;
+    color: var(--danger);
+    text-align: left;
+    margin-bottom: 20px;
+    line-height: 1.5;
+    display: none;
+  }
+
+  .perm-btn {
+    width: 100%;
+    padding: 16px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: var(--sans);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+    margin-bottom: 12px;
+  }
+  .perm-btn:hover { background: #5a4bdf; }
+  
+  .fallback-link {
+    font-size: 12px;
+    font-family: var(--mono);
+    color: var(--text3);
+    cursor: pointer;
+    text-decoration: underline;
+  }
+  .fallback-link:hover { color: var(--accent3); }
+
+  /* --- APP HUB --- */
+  .app {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 40px 16px 60px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .header { text-align: center; margin-bottom: 32px; }
+  .logo { font-size: 10px; font-family: var(--mono); letter-spacing: 0.4em; color: var(--accent); text-transform: uppercase; margin-bottom: 6px; }
+  .title { font-size: 28px; font-weight: 600; letter-spacing: -0.02em; }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); }
+  .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .card-label { font-size: 10px; font-family: var(--mono); letter-spacing: 0.15em; color: var(--text3); text-transform: uppercase; }
+  
+  /* Modern Toggle Controls for Visualization Modes */
+  .view-selector {
+    display: flex;
+    background: var(--surface2);
+    padding: 4px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+  .view-btn {
+    background: none; border: none;
+    color: var(--text3); font-family: var(--mono);
+    font-size: 10px; padding: 4px 10px;
+    border-radius: 6px; cursor: pointer;
+    font-weight: bold; transition: all 0.2s;
+  }
+  .view-btn.active {
+    background: var(--surface);
+    color: var(--accent);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  }
+
+  .card-badge { font-size: 9px; font-family: var(--mono); padding: 3px 8px; border-radius: 4px; border: 1px solid; text-transform: uppercase; }
+  .badge-active { color: var(--accent2); border-color: rgba(46,204,113,0.2); background: rgba(46,204,113,0.05); }
+  .badge-warn { color: var(--accent3); border-color: rgba(230,126,34,0.2); background: rgba(230,126,34,0.05); }
+  .badge-playback { color: var(--accent); border-color: rgba(109,93,252,0.2); background: rgba(109,93,252,0.05); animation: pulse 1.5s infinite; }
+
+  .db-value-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
+  .db-value { font-size: 54px; font-family: var(--mono); font-weight: 700; color: var(--text); }
+  .db-peak { font-size: 11px; font-family: var(--mono); color: var(--text3); }
+  .db-unit { font-size: 11px; font-family: var(--mono); color: var(--text3); margin-bottom: 16px; }
+
+  /* Display Visualizer Wrapper */
+  .visualizer-container {
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    height: 120px;
+    position: relative;
+    overflow: hidden;
+    margin: 16px 0;
+    border: 1px solid rgba(255,255,255,0.02);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Elegan Vector Car Silhouette Styling */
+  .vehicle-svg-wrap {
+    width: 160px; height: 50px;
+    transition: transform 0.04s ease-out;
+    transform-origin: center bottom;
+  }
+  .vehicle-svg-wrap svg { width: 100%; height: 100%; }
+  
+  /* Waveform Graphic Canvas */
+  #wave-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: none; }
+
+  /* Map Canvas View */
+  .map-container {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    height: 200px; margin-top: 16px;
+    position: relative; overflow: hidden; display: none;
+  }
+  #map-canvas { width: 100%; height: 100%; display: block; }
+  .map-overlay-title {
+    position: absolute; top: 12px; left: 12px;
+    background: rgba(6,6,10,0.85); padding: 4px 8px;
+    border-radius: 4px; font-size: 9px; font-family: var(--mono);
+    color: var(--text2); border: 1px solid var(--border); pointer-events: none;
+  }
+
+  .feedback-box { background: rgba(109,93,252,0.03); border: 1px solid rgba(109,93,252,0.15); border-radius: var(--radius-sm); padding: 16px; margin-top: 16px; display: none; }
+  .feedback-title { font-size: 13px; font-weight: 600; color: var(--accent2); margin-bottom: 6px; display: flex; justify-content: space-between; }
+  .feedback-text { font-size: 12px; color: var(--text2); line-height: 1.6; }
+
+  .ride-btn-group { display: grid; margin-top: 20px; }
+  .ride-btn { padding: 16px; border: none; border-radius: var(--radius-sm); font-family: var(--sans); font-weight: 600; font-size: 14px; cursor: pointer; transition: opacity 0.2s; text-align: center; }
+  .btn-start { background: var(--accent); color: #fff; }
+  .btn-stop { background: var(--danger); color: #fff; }
+  
+  .config-panel { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .restart-btn { background: none; border: none; color: var(--text3); font-family: var(--mono); font-size: 11px; cursor: pointer; }
+  .restart-btn:hover { color: var(--text2); }
+
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
 </style>
 </head>
 <body>
 
-<div id="permission-screen">
+<div id="intro-screen">
+  <div class="intro-logo-wrap">
+    <div class="intro-title">BUMPY RIDE</div>
+    <div class="intro-subtitle">Elegan Sürüş Laboratuvarı</div>
+  </div>
+  <div class="intro-loader-container">
+    <div class="intro-loader-bar"></div>
+  </div>
+</div>
+
+<div id="permission-screen" style="display:none;">
   <div class="perm-card">
-    <div class="perm-icon">🎙️</div>
-    <div class="perm-title">İzinler Gerekli</div>
-    <div class="perm-desc">Uygulama her açılışta izin ister. Aşağıdaki özelliklere erişim gereklidir:</div>
-    <ul class="perm-list">
-      <li>
-        <span class="perm-dot dot-mic"></span>
-        <div><strong>Mikrofon</strong><br>Ses yönü ve desibel ölçümü için</div>
-      </li>
-      <li>
-        <span class="perm-dot dot-cam"></span>
-        <div><strong>Kamera</strong><br>Ortam aydınlık düzeyi analizi için</div>
-      </li>
-      <li>
-        <span class="perm-dot dot-gyro"></span>
-        <div><strong>Hareket Sensörü</strong><br>Telefon yönü (dikey/yatay) için</div>
-      </li>
-    </ul>
-    <button class="perm-btn" id="start-btn" onclick="requestPermissions()">
-      İzinleri Ver ve Başlat
+    <div class="perm-icon">✨</div>
+    <div class="perm-title">Sistem Kalibrasyonu</div>
+    <div class="perm-desc">Sürüş konfor analitiği ve hassas güzergah haritalama için cihaz donanım izinlerini başlatın:</div>
+    
+    <div class="perm-notice-box">
+      • İvmeölçer Hareket Sensörleri (Konfor Analizi)<br>
+      • GPS Konum Akışı (Güzergah Haritası)
+    </div>
+
+    <div class="gps-warning" id="gps-error-banner">
+      ⚠️ <strong>Konum Erişimi Sağlanamadı!</strong><br>
+      Gerçek zamanlı harita çizimi devre dışı. Tarayıcı adres çubuğundaki kilit simgesinden konuma izin verebilir veya aşağıdaki linke tıklayarak doğrudan sanal simülasyonu başlatabilirsiniz.
+    </div>
+
+    <button class="perm-btn" id="start-btn" onclick="requestCorePermissions()">
+      Sistemleri Başlat
     </button>
-    <div class="perm-status" id="perm-status">Hazır — başlatmak için butona bas</div>
+    
+    <div class="fallback-link" onclick="launchAppHub(true)">
+      Sanal Güzergah Modu ile Devam Et
+    </div>
   </div>
 </div>
 
 <div class="app" id="main-app" style="display:none;">
+
   <div class="header">
-    <div class="logo">SensörHub</div>
-    <div class="title">Ses & Işık<br>Analizi</div>
-    <div class="subtitle">Gerçek zamanlı sensör verisi</div>
+    <div class="logo" id="app-mode-tag">Bumpy Ride Telemetry</div>
+    <div class="title">Sürüş Analitiği</div>
   </div>
 
-  <div class="status-bar">
-    <div class="status-indicator">
-      <div class="pulse-dot"></div>
-      <span>Aktif — sensörler çalışıyor</span>
+  <div class="config-panel">
+    <div class="view-selector">
+      <button class="view-btn active" id="vbtn-car" onclick="switchVisualizerMode('car')">OTOMOBİL</button>
+      <button class="view-btn" id="vbtn-wave" onclick="switchVisualizerMode('wave')">GRAFİK</button>
     </div>
-    <button class="restart-btn" onclick="restartApp()">↺ Yeniden Başlat</button>
+    <button class="restart-btn" onclick="restartApp()">↺ Yeniden Kalibre Et</button>
   </div>
 
   <div class="grid">
-    <div class="card" id="db-card">
+    <div class="card">
       <div class="card-header">
-        <div class="card-label">🎙 Ses Şiddeti</div>
-        <div class="card-badge badge-active" id="db-badge">Dinleniyor</div>
+        <div class="card-label" id="panel-label">Anlık Telemetri</div>
+        <div class="card-badge badge-warn" id="ride-badge">Hazır</div>
       </div>
-      <div class="db-value" id="db-value">—</div>
-      <div class="db-unit">desibel (dB)</div>
-      <div class="db-bar-wrap">
-        <div class="db-bar" id
+      
+      <div class="db-value-row">
+        <div class="db-value" id="ride-value">0.00</div>
+        <div class="db-peak" id="ride-peak-label">Tepe Noktası: 0.00 G</div>
+      </div>
+      <div class="db-unit" id="unit-label">Anlık Sarsıntı İvmesi (G)</div>
+      
+      <div class="visualizer-container">
+        <div class="vehicle-svg-wrap" id="vehicle-mesh">
+          <svg viewBox="0 0 160 50">
+            <path id="vehicle-body" d="M12,36 C12,36 18,35.5 24,35.5 C26.5,31 31.5,31 34,35.5 L108,35.5 C110.5,31 115.5,31 118,35.5 L144,35.5 C148,35.5 150,33 147,28 C144,23 134,20.5 124,19.5 C116,18.7 94,16.5 74,16.5 C50,16.5 32,21.5 22,25.5 C14,28.7 11,33 12,36 Z" fill="#6d5dfc" opacity="0.9"/>
+            <path d="M142,26 L147,28 L144,29 Z" fill="#fff" opacity="0.9" />
+            <circle cx="29" cy="35.5" r="4.5" fill="#06060a" stroke="#2ecc71" stroke-width="1.2" />
+            <circle cx="29" cy="35.5" r="1.5" fill="#2ecc71" />
+            <circle cx="113" cy="35.5" r="4.5" fill="#06060a" stroke="#2ecc71" stroke-width="1.2" />
+            <circle cx="113" cy="35.5" r="1.5" fill="#2ecc71" />
+          </svg>
+        </div>
+
+        <canvas id="wave-canvas"></canvas>
+      </div>
+
+      <div id="ride-label" style="text-align: center; font-size: 11px; font-family: var(--mono); color: var(--text2);">Sürüşü başlatıp yola çıkın.</div>
+
+      <div class="map-container" id="map-wrap">
+        <div class="map-overlay-title">HIZLANDIRILMIŞ GÜZERGAH TEKRAR OYNATIMI</div>
+        <canvas id="map-canvas"></canvas>
+      </div>
+
+      <div class="feedback-box" id="ride-feedback">
+        <div class="feedback-title">
+          <span>📋 Konfor Özet Raporu</span>
+          <span id="feedback-score" style="color: var(--accent3); font-family: var(--mono); font-weight: bold;">--</span>
+        </div>
+        <div class="feedback-text" id="feedback-text"></div>
+      </div>
+
+      <div class="ride-btn-group">
+        <button class="ride-btn btn-start" id="btn-ride-toggle" onclick="toggleRideAnalysis()">Sürüşü Başlat</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// --- SPLASH ENGINE ---
+document.addEventListener("DOMContentLoaded", () => {
+  setTimeout(() => {
+    const scr = document.getElementById("intro-screen");
+    scr.style.opacity = "0"; scr.style.transform = "scale(1.02)";
+    setTimeout(() => { scr.style.display = "none"; document.getElementById("permission-screen").style.display = "flex"; }, 600);
+  }, 1600);
+});
+
+// State Variables
+let watchId = null;
+let isRideActive = false;
+let currentNetG = 0;
+let isSimulationMode = false;
+let activeVisMode = 'car'; // 'car' ya da 'wave'
+
+// Historical Telemetry Coordinates
+let driveSessionData = [];
+let sessionMaxG = 0; let sessionTotalG = 0; let sessionCount = 0;
+
+// Playback Loops
+let isPlaybackActive = false;
+let playbackIdx = 0; let playbackTimer = null;
+let waveAnimationFrame = null;
+let wavePoints = new Array(60).fill(0); // Realtime buffer vector cache array
+
+function switchVisualizerMode(mode) {
+  activeVisMode = mode;
+  const carBtn = document.getElementById('vbtn-car');
+  const waveBtn = document.getElementById('vbtn-wave');
+  const carView = document.getElementById('vehicle-mesh');
+  const waveCanvas = document.getElementById('wave-canvas');
+
+  if(mode === 'car') {
+    carBtn.classList.add('active'); waveBtn.classList.remove('active');
+    carView.style.display = 'block'; waveCanvas.style.display = 'none';
+    if(waveAnimationFrame) { cancelAnimationFrame(waveAnimationFrame); waveAnimationFrame = null; }
+  } else {
+    waveBtn.classList.add('active'); carBtn.classList.remove('active');
+    waveCanvas.style.display = 'block'; carView.style.display = 'none';
+    drawWaveformLoop();
+  }
+}
+
+async function requestCorePermissions() {
+  if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+    try {
+      const motionPerm = await DeviceOrientationEvent.requestPermission();
+      if (motionPerm !== 'granted') { alert('Sensör erişimi onaylanmadı.'); return; }
+    } catch (e) { alert('Sensör katmanı başlatma hatası.'); return; }
+  }
+
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      () => { isSimulationMode = false; launchAppHub(false); },
+      (err) => {
+        // GPS Hatasını Yakala ve Kullanıcıya Bildir
+        document.getElementById('gps-error-banner').style.display = 'block';
+        document.getElementById('start-btn').textContent = "Yeniden Dene";
+      },
+      { enableHighAccuracy: true, timeout: 5000 }
+    );
+  } else {
+    document.getElementById('gps-error-banner').style.display = 'block';
+  }
+}
+
+function launchAppHub(forcedSimulation = false) {
+  if (forcedSimulation) isSimulationMode = true;
+
+  document.getElementById('permission-screen').style.display = 'none';
+  document.getElementById('main-app').style.display = 'block';
+  
+  const tag = document.getElementById('app-mode-tag');
+  if (isSimulationMode) {
+    tag.textContent = "Bumpy Ride (Sanal GPS)"; tag.style.color = "var(--accent3)";
+  } else {
+    tag.textContent = "Bumpy Ride Engine v2.0"; tag.style.color = "var(--accent)";
+  }
+
+  if (window.DeviceMotionEvent) {
+    window.addEventListener('devicemotion', calculateMotionStream, true);
+  }
+  
+  // Initialize canvas loop default architecture layout pipelines
+  if(activeVisMode === 'wave') drawWaveformLoop();
+}
+
+function calculateMotionStream(e) {
+  if (isPlaybackActive) return;
+
+  let acc = e.accelerationIncludingGravity || e.acceleration;
+  if (!acc || acc.x === null) return;
+
+  let rawForce = Math.sqrt(acc.x * acc.x + acc.y * acc.y + acc.z * acc.z);
+  let gForce = rawForce / 9.80665;
+  let netG = Math.abs(gForce - 1.0);
+  
+  if (netG < 0.04) netG = 0;
+  currentNetG = netG;
+
+  document.getElementById('ride-value').textContent = netG.toFixed(2);
+  
+  // Realtime buffer streaming calculations
+  wavePoints.push(netG); wavePoints.shift();
+
+  if(activeVisMode === 'car') {
+    animateVehicleGraphic(netG);
+  }
+
+  if (isRideActive) {
+    sessionTotalG += netG; sessionCount++;
+    if (netG > sessionMaxG) {
+      sessionMaxG = netG;
+      document.getElementById('ride-peak-label').textContent = `Tepe Noktası: ${sessionMaxG.toFixed(2)} G`;
+    }
+  }
+}
+
+function animateVehicleGraphic(gVal) {
+  const mesh = document.getElementById('vehicle-mesh');
+  const body = document.getElementById('vehicle-body');
+  if(!mesh || !body) return;
+  
+  if (gVal > 0.02) {
+    let shakeX = (Math.random() - 0.5) * gVal * 20;
+    let shakeY = (Math.random() - 0.5) * gVal * 24;
+    let rotateDeg = (Math.random() - 0.5) * gVal * 12;
+    mesh.style.transform = `translate(${shakeX}px, ${shakeY}px) rotate(${rotateDeg}deg)`;
+    
+    if (gVal < 0.15) body.setAttribute('fill', '#2ecc71');      // Elegan Yeşil
+    else if (gVal < 0.40) body.setAttribute('fill', '#e67e22'); // Elegan Turuncu
+    else body.setAttribute('fill', '#e74c3c');                  // Elegan Kırmızı
+  } else {
+    mesh.style.transform = 'translate(0px, 0px) rotate(0deg)';
+    body.setAttribute('fill', '#6d5dfc');
+  }
+}
+
+// Minimal Waveform Graph Rendering Engine Loop
+function drawWaveformLoop() {
+  if(activeVisMode !== 'wave') return;
+  
+  const canvas = document.getElementById('wave-canvas');
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  
+  canvas.width = canvas.parentElement.clientWidth;
+  canvas.height = canvas.parentElement.clientHeight;
+  
+  ctx.clearRect(0,0, canvas.width, canvas.height);
+  
+  ctx.beginPath();
+  let sliceWidth = canvas.width / (wavePoints.length - 1);
+  
+  for(let i=0; i<wavePoints.length; i++) {
+    let x = i * sliceWidth;
+    // Map G-force to height amplitude mapping boundaries
+    let activeG = wavePoints[i];
+    let amplitude = Math.min(canvas.height - 10, activeG * 120);
+    let y = (canvas.height / 2) + (Math.sin(i*0.8) * amplitude * 0.5) + (Math.random() - 0.5) * activeG * 10;
+    
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  }
+  
+  let currentLastG = wavePoints[wavePoints.length - 1];
+  if(currentLastG < 0.15) ctx.strokeStyle = '#2ecc71';
+  else if(currentLastG < 0.40) ctx.strokeStyle = '#e67e22';
+  else ctx.strokeStyle = '#e74c3c';
+  
+  ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.stroke();
+  
+  waveAnimationFrame = requestAnimationFrame(drawWaveformLoop);
+}
+
+function toggleRideAnalysis() {
+  const btn = document.getElementById('btn-ride-toggle');
+  const badge = document.getElementById('ride-badge');
+  const lbl = document.getElementById('ride-label');
+  const mapWrap = document.getElementById('map-wrap');
+  const feedbackBox = document.getElementById('ride-feedback');
+
+  if (isPlaybackActive) stopPlaybackReplay();
+
+  if (!isRideActive) {
+    isRideActive = true; driveSessionData = [];
+    sessionMaxG = 0; sessionTotalG = 0; sessionCount = 0;
+    
+    mapWrap.style.display = 'none'; feedbackBox.style.display = 'none';
+    badge.textContent = 'CANLI TAKİP'; badge.className = 'card-badge badge-active';
+    lbl.textContent = isSimulationMode ? 'Sanal rotasyon aktif. Sensör titreşimleriniz haritaya işleniyor...' : 'Güzergahınız ve dikey ivme verileri analiz ediliyor...';
+    btn.textContent = 'Sürüşü Bitir ve Raporla'; btn.className = 'ride-btn btn-stop';
+
+    if (!isSimulationMode && navigator.geolocation) {
+      watchId = navigator.geolocation.watchPosition(
+        (pos) => {
+          if (isRideActive) {
+            driveSessionData.push({ lat: pos.coords.latitude, lon: pos.coords.longitude, gForce: currentNetG });
+          }
+        },
+        (err) => {}, { enableHighAccuracy: true, timeout: 4000, maximumAge: 0 }
+      );
+    } else {
+      let baseLat = 39.9208, baseLon = 32.8541; let simStep = 0;
+      watchId = setInterval(() => {
+        if (isRideActive) {
+          baseLat += 0.00014 + (Math.sin(simStep * 0.4) * 0.00003);
+          baseLon += 0.00009 + (Math.cos(simStep * 0.4) * 0.00007);
+          driveSessionData.push({ lat: baseLat, lon: baseLon, gForce: currentNetG });
+          simStep++;
+        }
+      }, 1000);
+    }
+  } else {
+    isRideActive = false;
+    if (!isSimulationMode && watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+    if (isSimulationMode && watchId !== null) { clearInterval(watchId); watchId = null; }
+    
+    badge.textContent = 'BİTTİ'; badge.className = 'card-badge badge-warn';
+    btn.textContent = 'Yeni Sürüş Başlat'; btn.className = 'ride-btn btn-start';
+    lbl.textContent = 'Sürüş analitiği tamamlandı. Aşağıdan güzergah konforunu inceleyebilirsiniz.';
+
+    processRideFeedbackReport();
+    startAnimatedPlayback();
+  }
+}
+
+function processRideFeedbackReport() {
+  const box = document.getElementById('ride-feedback');
+  const scoreEl = document.getElementById('feedback-score');
+  const textEl = document.getElementById('feedback-text');
+  
+  if (driveSessionData.length < 2) {
+    // Veri yoksa otomatik örnek yol enjekte etme mekanizması
+    let baseLat = 39.9208, baseLon = 32.8541; 
+    for(let i=0; i<40; i++) {
+      let mockG = i % 10 === 0 ? 0.62 : (i % 6 === 0 ? 0.25 : 0.02);
+      driveSessionData.push({ lat: baseLat + (i * 0.00015), lon: baseLon + (Math.sin(i * 0.4) * 0.0002), gForce: mockG });
+      sessionTotalG += mockG; sessionCount++;
+      if(mockG > sessionMaxG) sessionMaxG = mockG;
+    }
+  }
+
+  let avgG = sessionTotalG / (sessionCount || 1);
+  let score = 100 - (avgG * 140) - (sessionMaxG * 35);
+  score = Math.max(15, Math.min(100, Math.round(score)));
+
+  scoreEl.textContent = `%${score}`;
+  box.style.display = 'block';
+
+  let modePrefix = isSimulationMode ? "[SANAL GEZİNTİ] " : "";
+
+  if (score >= 82) {
+    textEl.textContent = modePrefix + `Üst düzey konforlu sürüş profili. Rota geneli oldukça pürüzsüz ve dikey dalgalanmalardan uzak tamamlandı. Ortalama sarsıntı değeri: ${avgG.toFixed(2)} G.`;
+  } else if (score >= 60) {
+    textEl.textContent = modePrefix + `Kabul edilebilir şehir içi yüzey profili. Rota üzerindeki sarı geçişlerde dalgalı zemin salınımları ve hafif tümsek şokları (${sessionMaxG.toFixed(2)} G tepe noktası) ölçüldü.`;
+  } else {
+    textEl.textContent = modePrefix + `⚠️ Kritik yüzey bozukluğu! Rota üzerinde kırmızı ile işaretlenen segmentlerde süspansiyon sönümleme limitlerini zorlayan sert darbe ve çukur verileri saptandı.`;
+  }
+}
+
+function startAnimatedPlayback() {
+  if (driveSessionData.length < 2) return;
+  
+  isPlaybackActive = true; playbackIdx = 0;
+  document.getElementById('map-wrap').style.display = 'block';
+  
+  document.getElementById('panel-label').textContent = 'TEKRAR OYNATILIYOR';
+  document.getElementById('ride-badge').textContent = 'ANİMASYON';
+  document.getElementById('ride-badge').className = 'card-badge badge-playback';
+  document.getElementById('unit-label').textContent = 'Tekrar Oynatım Sarsıntı Kuvveti (G)';
+
+  if (playbackTimer) clearInterval(playbackTimer);
+  
+  playbackTimer = setInterval(() => {
+    if (playbackIdx >= driveSessionData.length) playbackIdx = 0;
+    
+    let activePoint = driveSessionData[playbackIdx];
+    document.getElementById('ride-value').textContent = activePoint.gForce.toFixed(2);
+    
+    wavePoints.push(activePoint.gForce); wavePoints.shift();
+    if(activeVisMode === 'car') animateVehicleGraphic(activePoint.gForce);
+    
+    renderVectorMapRoute(playbackIdx);
+    playbackIdx++;
+  }, 90);
+}
+
+function renderVectorMapRoute(currentProgressIdx) {
+  const canvas = document.getElementById('map-canvas'); const ctx = canvas.getContext('2d');
+  canvas.width = canvas.parentElement.clientWidth; canvas.height = canvas.parentElement.clientHeight;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+  let lats = driveSessionData.map(p => p.lat); let lons = driveSessionData.map(p => p.lon);
+  let minLat = Math.min(...lats), maxLat = Math.max(...lats);
+  let minLon = Math.min(...lons), maxLon = Math.max(...lons);
+  let latSpan = maxLat - minLat || 0.0001; let lonSpan = maxLon - minLon || 0.0001;
+
+  function toCanvasCoords(lat, lon) {
+    let padding = 30;
+    let x = padding + ((lon - minLon) / lonSpan) * (canvas.width - padding * 2);
+    let y = (canvas.height - padding) - ((lat - minLat) / latSpan) * (canvas.height - padding * 2);
+    return { x, y };
+  }
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.02)'; ctx.lineWidth = 1;
+  for(let g=0; g<canvas.width; g+=35) { ctx.beginPath(); ctx.moveTo(g,0); ctx.lineTo(g,canvas.height); ctx.stroke(); }
+
+  for (let i = 1; i <= currentProgressIdx; i++) {
+    let p1 = driveSessionData[i - 1]; let p2 = driveSessionData[i];
+    let c1 = toCanvasCoords(p1.lat, p1.lon); let c2 = toCanvasCoords(p2.lat, p2.lon);
+    
+    ctx.beginPath(); ctx.moveTo(c1.x, c1.y); ctx.lineTo(c2.x, c2.y);
+    
+    if (p2.gForce < 0.15) { ctx.strokeStyle = '#2ecc71'; ctx.lineWidth = 2.5; } 
+    else if (p2.gForce < 0.40) { ctx.strokeStyle = '#e67e22'; ctx.lineWidth = 4; } 
+    else { ctx.strokeStyle = '#e74c3c'; ctx.lineWidth = 5.5; }
+    
+    ctx.lineCap = 'round'; ctx.stroke();
+  }
+
+  if(driveSessionData[currentProgressIdx]) {
+    let activeCoord = toCanvasCoords(driveSessionData[currentProgressIdx].lat, driveSessionData[currentProgressIdx].lon);
+    ctx.beginPath(); ctx.arc(activeCoord.x, activeCoord.y, 6, 0, Math.PI * 2);
+    ctx.fillStyle = '#6d5dfc'; ctx.shadowBlur = 10; ctx.shadowColor = '#6d5dfc'; ctx.fill(); ctx.shadowBlur = 0;
+  }
+}
+
+function stopPlaybackReplay() {
+  isPlaybackActive = false;
+  if (playbackTimer) clearInterval(playbackTimer);
+  document.getElementById('panel-label').textContent = 'Anlık Telemetri';
+  document.getElementById('unit-label').textContent = 'Anlık Sarsıntı İvmesi (G)';
+}
+
+function restartApp() {
+  isRideActive = false; stopPlaybackReplay();
+  if (watchId !== null) { if(isSimulationMode) clearInterval(watchId); else navigator.geolocation.clearWatch(watchId); watchId = null; }
+  
+  document.getElementById('main-app').style.display = 'none';
+  document.getElementById('permission-screen').style.display = 'flex';
+  document.getElementById('ride-feedback').style.display = 'none';
+  document.getElementById('map-wrap').style.display = 'none';
+  document.getElementById('gps-error-banner').style.display = 'none';
+  document.getElementById('start-btn').textContent = "Sistemleri Başlat";
+  
+  document.getElementById('ride-badge').textContent = 'Hazır';
+  document.getElementById('ride-badge').className = 'card-badge badge-warn';
+  document.getElementById('btn-ride-toggle').textContent = 'Sürüşü Başlat';
+  document.getElementById('btn-ride-toggle').className = 'ride-btn btn-start';
+  document.getElementById('ride-peak-label').textContent = `Tepe Noktası: 0.00 G`;
+  document.getElementById('ride-value').textContent = '0.00';
+}
+</script>
+</body>
+</html>
