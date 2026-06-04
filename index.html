@@ -56,4 +56,17 @@
 
   /* --- APPLICATION LAYOUT --- */
   .app { position: relative; z-index: 1; max-width: 480px; margin: 0 auto; padding: 24px 16px 48px; }
-  .header { text-align:
+  .header { text-align: center; margin-bottom: 24px; }
+  .logo { font-size: 11px; font-family: var(--mono); letter-spacing: 0.2em; color: var(--accent); text-transform: uppercase; font-weight: 700; margin-bottom: 4px; }
+  .title { font-size: 30px; font-weight: 800; letter-spacing: -0.03em; background: linear-gradient(135deg, #ffffff, rgba(255,255,255,0.7)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+  /* Permission Screen */
+  #permission-screen { position: fixed; inset: 0; background: var(--bg); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 24px; }
+  .perm-card { background: var(--surface); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid var(--border); border-radius: var(--radius); padding: 36px 24px; width: 100%; text-align: center; box-shadow: 0 24px 50px rgba(0,0,0,0.5); }
+  .perm-icon { width: 64px; height: 64px; border-radius: 20px; background: rgba(129, 98, 255, 0.1); border: 1px solid rgba(129, 98, 255, 0.2); display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 28px; }
+  .perm-title { font-size: 22px; font-weight: 800; margin-bottom: 10px; }
+  .perm-desc { font-size: 14px; color: var(--text2); line-height: 1.5; margin-bottom: 24px; }
+  .perm-btn { width: 100%; padding: 16px; background: var(--accent); color: #fff; border: none; border-radius: var(--radius-sm); font-family: var(--sans); font-size: 15px; font-weight: 700; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px var(--accent-glow); }
+  .perm-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(129, 98, 255, 0.4); }
+
+  /* Dashboard
