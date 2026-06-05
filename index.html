@@ -432,11 +432,11 @@ let watchId = null;
 let isRideActive = false;
 let currentNetG = 0;
 let rideStartTime = null;
-let durationTimer = null; // Kronometre sayacı
+let durationTimer = null; 
 let driveSessionData = [];
 let sessionMaxG = 0; let sessionTotalG = 0; let sessionCount = 0; let totalAccumulatedDistance = 0;
 let isPlaybackActive = false; let playbackIdx = 0; let playbackTimer = null;
-let wasGpsSuccessful = false; // Gerçek GPS verisi geldi mi kontrolü
+let wasGpsSuccessful = false; 
 
 function calculateMotionStream(e) {
   if (isPlaybackActive) return;
@@ -493,20 +493,17 @@ function drawWaveGraphFrame(latestG) {
   canvas.width = canvas.parentElement.clientWidth; canvas.height = canvas.parentElement.clientHeight;
   ctx.clearRect(0,0,canvas.width, canvas.height);
 
-  // Arka plan kılavuz çizgileri
   ctx.strokeStyle = 'rgba(255,255,255,0.03)'; ctx.lineWidth = 1;
   for(let i=1; i<4; i++) {
     let y = (canvas.height / 4) * i;
     ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
   }
 
-  // Dalga çizimi
   ctx.beginPath();
   let step = canvas.width / (waveDataHistory.length - 1);
   for(let i=0; i<waveDataHistory.length; i++) {
     let val = waveDataHistory[i];
     let x = i * step;
-    // Maksimum 1.5G sığacak şekilde ölçekle
     let y = canvas.height - (Math.min(val, 1.5) / 1.5) * (canvas.height - 20) - 10;
     if(i===0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
   }
@@ -561,7 +558,6 @@ function toggleRideAnalysis() {
     lbl.textContent = 'Güzergahınız, süreniz ve sarsıntılarınız gerçek zamanlı işleniyor...';
     btn.textContent = 'Sürüşü Bitir ve Raporla'; btn.className = 'ride-btn btn-stop';
 
-    // Kronometre Sayacını Başlat
     durationTimer = setInterval(() => {
       let diff = Date.now() - rideStartTime;
       document.getElementById('metric-duration').textContent = formatTime(diff);
@@ -571,218 +567,9 @@ function toggleRideAnalysis() {
       watchId = navigator.geolocation.watchPosition(
         (pos) => {
           if (!isRideActive) return;
-          wasGpsSuccessful = true; // Gerçek GPS'ten koordinat başarıyla yakalandı
+          wasGpsSuccessful = true; 
           errBanner.style.display = 'none';
 
           let currentLat = pos.coords.latitude;
           let currentLon = pos.coords.longitude;
           let speed = pos.coords.speed ? (pos.coords.speed * 3.6) : 0;
-          
-          if (driveSessionData.length > 0) {
-            let prev = driveSessionData[driveSessionData.length - 1];
-            let step = computeHaversineDistance(prev.lat, prev.lon, currentLat, currentLon);
-            totalAccumulatedDistance += step;
-          }
-          updateLiveMetricsUI(totalAccumulatedDistance, speed);
-          driveSessionData.push({ lat: currentLat, lon: currentLon, gForce: currentNetG, distanceAcc: totalAccumulatedDistance, speedAnlk: speed });
-        },
-        (err) => { 
-          console.log("GPS İzin/Sinyal Hatası.");
-          errBanner.style.display = 'block';
-        },
-        { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
-      );
-    } else {
-      errBanner.style.display = 'block';
-    }
-  } else {
-    isRideActive = false;
-    if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
-    if (durationTimer) { clearInterval(durationTimer); durationTimer = null; }
-    
-    badge.textContent = 'BİTTİ'; badge.className = 'card-badge badge-warn';
-    btn.textContent = 'Yeni Sürüş Başlat'; btn.className = 'ride-btn btn-start';
-    lbl.textContent = 'Sürüş sonlandırıldı. Raporu okuyup güzergah simülasyonunu açabilirsiniz.';
-    
-    processRideFeedbackReport();
-    pbcInitBtn.style.display = 'block';
-    errBanner.style.display = 'none';
-  }
-}
-
-function updateLiveMetricsUI(dist, speed) {
-  document.getElementById('metric-distance').textContent = dist >= 1000 ? `${(dist / 1000).toFixed(2)} km` : `${Math.round(dist)} m`;
-  document.getElementById('metric-speed').textContent = `${speed.toFixed(1)} km/h`;
-}
-
-function processRideFeedbackReport() {
-  const box = document.getElementById('ride-feedback');
-  const scoreEl = document.getElementById('feedback-score');
-  const textEl = document.getElementById('feedback-text');
-  
-  let totalDurationMs = Date.now() - rideStartTime;
-
-  // Eğer gerçek GPS hiç veri üretemediyse, arayüz boş kalmasın diye yapay veri enjekte edilir
-  if (!wasGpsSuccessful || driveSessionData.length < 2) {
-    injectMockupTelemetryRoute();
-    document.getElementById('gps-error-banner').style.display = 'block';
-    document.getElementById('gps-error-banner').textContent = "⚠️ NOT: Gerçek GPS konum sinyali alınamadığı için haritada test amaçlı demo rota çizilmiştir.";
-  }
-
-  let durationSec = totalDurationMs / 1000 || 1;
-  let avgSpeed = (totalAccumulatedDistance / durationSec) * 3.6;
-
-  let avgG = sessionTotalG / sessionCount || 0.02;
-  let score = Math.max(10, Math.min(100, Math.round(100 - (avgG * 130) - (sessionMaxG * 40))));
-
-  scoreEl.textContent = `Konfor Skoru: %${score}`;
-  box.style.display = 'block';
-
-  let distStr = totalAccumulatedDistance >= 1000 ? `${(totalAccumulatedDistance/1000).toFixed(2)} km` : `${Math.round(totalAccumulatedDistance)} m`;
-  let timeStr = formatTime(totalDurationMs);
-  let baseReport = `Özet: Sürüş ${timeStr} sürdü. Toplam mesafe ${distStr}, ortalama hız ${avgSpeed.toFixed(1)} km/h. `;
-
-  if (score >= 82) textEl.textContent = baseReport + `Harika! Akıcı, sarsıntısız ve son derece konforlu bir sürüş tamamlandı.`;
-  else if (score >= 60) textEl.textContent = baseReport + `Orta düzey konfor. Bölgesel yol bozulmaları veya kasis geçişleri tetiklendi.`;
-  else textEl.textContent = baseReport + `⚠️ Düşük konfor uyarısı! Rota üzerinde amortisör sınırlarını zorlayan yüksek dikey ivmeli sert darbeler algılandı.`;
-}
-
-function injectMockupTelemetryRoute() {
-  let baseLat = 41.0082, baseLon = 28.9784; totalAccumulatedDistance = 0;
-  driveSessionData = [];
-  for(let i=0; i<60; i++) {
-    let mockG = i % 15 === 0 ? 0.55 : (i % 8 === 0 ? 0.22 : 0.03);
-    let lat = baseLat + (i * 0.00012); let lon = baseLon + (Math.sin(i * 0.35) * 0.00018);
-    let speed = 40 + Math.sin(i*0.15)*12;
-    if (i > 0) totalAccumulatedDistance += computeHaversineDistance(driveSessionData[i-1].lat, driveSessionData[i-1].lon, lat, lon);
-    driveSessionData.push({ lat: lat, lon: lon, gForce: mockG, distanceAcc: totalAccumulatedDistance, speedAnlk: speed });
-    sessionTotalG += mockG; sessionCount++; if(mockG > sessionMaxG) sessionMaxG = mockG;
-  }
-  updateLiveMetricsUI(totalAccumulatedDistance, 0);
-}
-
-function initializePlaybackView() {
-  document.getElementById('pbc-init-btn').style.display = 'none';
-  document.getElementById('map-wrap').classList.add('visible');
-  document.getElementById('pbc-panel').style.display = 'grid';
-  playbackIdx = 0;
-  setTimeout(() => {
-    renderVectorMapRoute(0);
-    if(driveSessionData[0]) updateLiveMetricsUI(driveSessionData[0].distanceAcc, driveSessionData[0].speedAnlk);
-  }, 300);
-}
-
-function togglePlaybackAction() {
-  const pbcBtn = document.getElementById('btn-pbc-trigger');
-  if (driveSessionData.length < 2) return;
-
-  if (!isPlaybackActive) {
-    isPlaybackActive = true; pbcBtn.textContent = 'Duraklat'; pbcBtn.className = 'pbc-btn btn-pbc-pause';
-    document.getElementById('panel-label').textContent = 'TEKRAR OYNATILIYOR';
-    document.getElementById('ride-badge').textContent = 'ANİMASYON'; document.getElementById('ride-badge').className = 'card-badge badge-playback';
-
-    playbackTimer = setInterval(() => {
-      if (playbackIdx >= driveSessionData.length) playbackIdx = 0;
-      let pt = driveSessionData[playbackIdx];
-      document.getElementById('ride-value').textContent = pt.gForce.toFixed(2);
-      
-      if(selectedGraphMode === 'mesh') {
-        animateVehicleGraphic(pt.gForce);
-      } else {
-        waveDataHistory.push(pt.gForce);
-        waveDataHistory.shift();
-        drawWaveGraphFrame(pt.gForce);
-      }
-
-      updateLiveMetricsUI(pt.distanceAcc, pt.speedAnlk);
-      renderVectorMapRoute(playbackIdx);
-      playbackIdx++;
-    }, 120);
-  } else {
-    isPlaybackActive = false; clearInterval(playbackTimer);
-    pbcBtn.textContent = 'Oynat'; pbcBtn.className = 'pbc-btn btn-pbc-play';
-  }
-}
-
-function resetPlaybackReplay() {
-  isPlaybackActive = false; if (playbackTimer) clearInterval(playbackTimer);
-  const pbcBtn = document.getElementById('btn-pbc-trigger');
-  pbcBtn.textContent = 'Oynat'; pbcBtn.className = 'pbc-btn btn-pbc-play';
-  playbackIdx = 0;
-  if(driveSessionData.length > 0) {
-    renderVectorMapRoute(0);
-    let f = driveSessionData[0];
-    document.getElementById('ride-value').textContent = f.gForce.toFixed(2);
-    if(selectedGraphMode==='mesh') animateVehicleGraphic(f.gForce); else drawWaveGraphFrame(f.gForce);
-    updateLiveMetricsUI(f.distanceAcc, f.speedAnlk);
-  }
-}
-
-function renderVectorMapRoute(currentProgressIdx) {
-  const canvas = document.getElementById('map-canvas');
-  if(!canvas) return; const ctx = canvas.getContext('2d');
-  canvas.width = canvas.parentElement.clientWidth; canvas.height = canvas.parentElement.clientHeight;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  
-  let lats = driveSessionData.map(p => p.lat); let lons = driveSessionData.map(p => p.lon);
-  let minLat = Math.min(...lats), maxLat = Math.max(...lats);
-  let minLon = Math.min(...lons), maxLon = Math.max(...lons);
-  let latSpan = maxLat - minLat || 0.0001; let lonSpan = maxLon - minLon || 0.0001;
-
-  function toCanvasCoords(lat, lon) {
-    let padding = 35;
-    let x = padding + ((lon - minLon) / lonSpan) * (canvas.width - padding * 2);
-    let y = (canvas.height - padding) - ((lat - minLat) / latSpan) * (canvas.height - padding * 2);
-    return { x, y };
-  }
-
-  for (let i = 1; i <= currentProgressIdx; i++) {
-    let c1 = toCanvasCoords(driveSessionData[i-1].lat, driveSessionData[i-1].lon);
-    let c2 = toCanvasCoords(driveSessionData[i].lat, driveSessionData[i].lon);
-    ctx.beginPath(); ctx.moveTo(c1.x, c1.y); ctx.lineTo(c2.x, c2.y);
-    let gf = driveSessionData[i].gForce;
-    if (gf < 0.15) { ctx.strokeStyle = '#3dd6ac'; ctx.lineWidth = 3; }
-    else if (gf < 0.40) { ctx.strokeStyle = '#f7a26a'; ctx.lineWidth = 4.5; }
-    else { ctx.strokeStyle = '#f74a6a'; ctx.lineWidth = 6; }
-    ctx.lineCap = 'round'; ctx.stroke();
-  }
-
-  if(driveSessionData[currentProgressIdx]) {
-    let coord = toCanvasCoords(driveSessionData[currentProgressIdx].lat, driveSessionData[currentProgressIdx].lon);
-    ctx.beginPath(); ctx.arc(coord.x, coord.y, 6, 0, Math.PI * 2); ctx.fillStyle = '#7c6af7'; ctx.fill();
-  }
-}
-
-function stopPlaybackReplay() {
-  isPlaybackActive = false; if (playbackTimer) clearInterval(playbackTimer);
-  document.getElementById('panel-label').textContent = 'Anlık Durum';
-  document.getElementById('ride-badge').textContent = 'BİTTİ'; document.getElementById('ride-badge').className = 'card-badge badge-warn';
-}
-
-function restartApp() {
-  isRideActive = false; stopPlaybackReplay();
-  if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
-  if (durationTimer) { clearInterval(durationTimer); durationTimer = null; }
-  
-  document.getElementById('main-app').style.display = 'none';
-  document.getElementById('ride-feedback').style.display = 'none';
-  document.getElementById('pbc-panel').style.display = 'none';
-  document.getElementById('pbc-init-btn').style.display = 'none';
-  document.getElementById('map-wrap').classList.remove('visible');
-  document.getElementById('gps-error-banner').style.display = 'none';
-  document.getElementById('selection-screen').style.display = 'flex';
-  
-  document.getElementById('ride-badge').textContent = 'Hazır';
-  document.getElementById('ride-badge').className = 'card-badge badge-warn';
-  document.getElementById('btn-ride-toggle').textContent = 'Sürüşü Başlat';
-  document.getElementById('btn-ride-toggle').className = 'ride-btn btn-start';
-  document.getElementById('ride-peak-label').textContent = `En Yüksek: 0.00 G`;
-  document.getElementById('ride-value').textContent = '0.00';
-  document.getElementById('metric-distance').textContent = '0 m';
-  document.getElementById('metric-speed').textContent = '0.0 km/h';
-  document.getElementById('metric-duration').textContent = '00:00:00';
-  waveDataHistory = Array(40).fill(0);
-}
-</script>
-</body>
-</html>
