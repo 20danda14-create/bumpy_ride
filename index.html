@@ -90,10 +90,11 @@
     display: flex;
     flex-direction: column;
     align-items: center;
+    -webkit-tap-highlight-color: transparent;
   }
   .option-box.selected { border-color: var(--accent); background: rgba(124,106,247,0.05); }
   .option-svg { width: 80px; height: 40px; margin-bottom: 8px; pointer-events: none; }
-  .option-name { font-size: 13px; font-weight: 700; color: var(--text); }
+  .option-name { font-size: 13px; font-weight: 700; color: var(--text); pointer-events: none; }
 
   .perm-notice-box {
     background: rgba(61,214,172,0.04);
@@ -120,6 +121,7 @@
     cursor: pointer;
     margin-top: 20px;
     transition: background 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
   }
   .perm-btn:hover { background: #6552ea; }
 
@@ -178,13 +180,13 @@
   .feedback-text { font-size: 12px; font-family: monospace; color: var(--text2); line-height: 1.5; }
 
   .ride-btn-group { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 16px; }
-  .ride-btn { padding: 14px; border: none; border-radius: var(--radius-sm); font-weight: 600; font-size: 14px; cursor: pointer; text-align: center;}
+  .ride-btn { padding: 14px; border: none; border-radius: var(--radius-sm); font-weight: 600; font-size: 14px; cursor: pointer; text-align: center; -webkit-tap-highlight-color: transparent;}
   .btn-start { background: var(--accent2); color: #0a0a0f; }
   .btn-stop { background: var(--danger); color: #fff; }
   .btn-play { background: #7c6af7; color: #fff; }
   
   .config-panel { display: flex; justify-content: flex-end; margin-bottom: 12px; }
-  .restart-btn { background: none; border: 1px solid var(--border); color: var(--text3); font-family: monospace; font-size: 11px; padding: 4px 10px; border-radius: 4px; cursor: pointer; }
+  .restart-btn { background: none; border: 1px solid var(--border); color: var(--text3); font-family: monospace; font-size: 11px; padding: 4px 10px; border-radius: 4px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 
   @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 </style>
@@ -198,19 +200,19 @@
     
     <div class="section-divider">1. Panel Ekran Grafiği</div>
     <div class="vehicle-options" style="margin-bottom: 16px;">
-      <div class="option-box selected" id="opt-g-mesh" onclick="selectGraphType('mesh')">
-        <div style="font-size: 24px; margin-bottom: 6px;">🚗</div>
+      <div class="option-box selected" id="opt-g-mesh">
+        <div style="font-size: 24px; margin-bottom: 6px; pointer-events: none;">🚗</div>
         <div class="option-name">Araç Animasyonu</div>
       </div>
-      <div class="option-box" id="opt-g-wave" onclick="selectGraphType('wave')">
-        <div style="font-size: 24px; margin-bottom: 6px;">📈</div>
+      <div class="option-box" id="opt-g-wave">
+        <div style="font-size: 24px; margin-bottom: 6px; pointer-events: none;">📈</div>
         <div class="option-name">İvme Dalga Grafiği</div>
       </div>
     </div>
 
     <div class="section-divider">2. Araç Simge Tipi</div>
     <div class="vehicle-options">
-      <div class="option-box selected" id="opt-sedan" onclick="selectVehicleType('sedan')">
+      <div class="option-box selected" id="opt-sedan">
         <div class="option-svg">
           <svg viewBox="0 0 120 50">
             <path d="M10,35 L22,35 C24,30 30,30 32,35 L82,35 C84,30 90,30 92,35 L112,35 L110,27 C108,23 101,21 93,20 L76,17 L44,17 L24,23 L12,27 Z" fill="#3b82f6" />
@@ -221,7 +223,7 @@
         <div class="option-name">Mavi Sedan</div>
       </div>
       
-      <div class="option-box" id="opt-suv" onclick="selectVehicleType('suv')">
+      <div class="option-box" id="opt-suv">
         <div class="option-svg">
           <svg viewBox="0 0 120 50">
             <path d="M8,35 L20,35 C22,29 29,29 31,35 L81,35 C83,29 90,29 92,35 L114,35 L113,24 C112,20 106,18 98,18 L88,14 L42,14 L20,20 L10,24 Z" fill="#ef4444" />
@@ -238,18 +240,18 @@
       • GPS uyduları hız ve güzergah takibi için aktif hale getirilir.
     </div>
 
-    <button class="perm-btn" onclick="directSkipToDashboard()">İleri ve Modeli Kilitle</button>
+    <button class="perm-btn" id="btn-core-submit">İleri ve Modeli Kilitle</button>
   </div>
 </div>
 
 <div class="app" id="main-app" style="display:none;">
   <div class="header">
-    <div class="logo">Bumpy Ride Engine v5.2</div>
+    <div class="logo">Bumpy Ride Engine v5.3</div>
     <div class="title">Sürüş Analitiği</div>
   </div>
 
   <div class="config-panel">
-    <button class="restart-btn" onclick="restartApp()">↺ Modeli Yeniden Seç</button>
+    <button class="restart-btn" id="btn-app-restart">↺ Modeli Yeniden Seç</button>
   </div>
 
   <div class="grid">
@@ -301,7 +303,7 @@
       </div>
 
       <div class="ride-btn-group">
-        <button class="ride-btn btn-start" id="btn-ride-toggle" onclick="handleMainButtonClick()">Sürüşü Başlat</button>
+        <button class="ride-btn btn-start" id="btn-ride-toggle">Sürüşü Başlat</button>
       </div>
     </div>
   </div>
@@ -317,17 +319,48 @@ let currentAppFlowState = 'ready';
 const sedanSVG = `<svg viewBox="0 0 120 50"><path id="vehicle-body" d="M10,35 L22,35 C24,30 30,30 32,35 L82,35 C84,30 90,30 92,35 L112,35 L110,27 C108,23 101,21 93,20 L76,17 L44,17 L24,23 L12,27 Z" fill="#3b82f6" /><circle cx="27" cy="35" r="5.5" fill="#0a0a0f" stroke="#3dd6ac" stroke-width="1.5" /><circle cx="87" cy="35" r="5.5" fill="#0a0a0f" stroke="#3dd6ac" stroke-width="1.5" /></svg>`;
 const suvSVG = `<svg viewBox="0 0 120 50"><path id="vehicle-body" d="M8,35 L20,35 C22,29 29,29 31,35 L81,35 C83,29 90,29 92,35 L114,35 L113,24 C112,20 106,18 98,18 L88,14 L42,14 L20,20 L10,24 Z" fill="#ef4444" /><circle cx="25.5" cy="35" r="6.5" fill="#0a0a0f" stroke="#3dd6ac" stroke-width="1.5" /><circle cx="86.5" cy="35" r="6.5" fill="#0a0a0f" stroke="#3dd6ac" stroke-width="1.5" /></svg>`;
 
-function selectVehicleType(type) {
-  selectedModelType = type;
-  document.getElementById('opt-sedan').classList.toggle('selected', type === 'sedan');
-  document.getElementById('opt-suv').classList.toggle('selected', type === 'suv');
-}
+// --- GÜVENLİ OLAY DİNLEYİCİ BAĞLAMA SİSTEMİ (NATIVE EVENT BINDING) ---
+window.addEventListener('DOMContentLoaded', () => {
+  const addAction = (id, callback) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('click', callback, false);
+    el.addEventListener('touchstart', (e) => { 
+      e.preventDefault(); // Çift tetiklemeyi ve donmayı engeller
+      callback(); 
+    }, { passive: false });
+  };
 
-function selectGraphType(mode) {
-  selectedGraphMode = mode;
-  document.getElementById('opt-g-mesh').classList.toggle('selected', mode === 'mesh');
-  document.getElementById('opt-g-wave').classList.toggle('selected', mode === 'wave');
-}
+  // Açılış Havuz Elemanları Dinleyicileri
+  addAction('opt-sedan', () => {
+    selectedModelType = 'sedan';
+    document.getElementById('opt-sedan').classList.add('selected');
+    document.getElementById('opt-suv').classList.remove('selected');
+  });
+
+  addAction('opt-suv', () => {
+    selectedModelType = 'suv';
+    document.getElementById('opt-suv').classList.add('selected');
+    document.getElementById('opt-sedan').classList.remove('selected');
+  });
+
+  addAction('opt-g-mesh', () => {
+    selectedGraphMode = 'mesh';
+    document.getElementById('opt-g-mesh').classList.add('selected');
+    document.getElementById('opt-g-wave').classList.remove('selected');
+  });
+
+  addAction('opt-g-wave', () => {
+    selectedGraphMode = 'wave';
+    document.getElementById('opt-g-wave').classList.add('selected');
+    document.getElementById('opt-g-mesh').classList.remove('selected');
+  });
+
+  // Büyük Butonlar
+  addAction('btn-core-submit', directSkipToDashboard);
+  addAction('btn-ride-toggle', handleMainButtonClick);
+  addAction('btn-app-restart', restartApp);
+});
 
 // Telemetry & Hardware Stream Variables
 let watchId = null; let currentNetG = 0;
@@ -337,7 +370,6 @@ let sessionMaxG = 0; let sessionTotalG = 0; sessionCount = 0;
 let currentSpeedKmh = 0; let speedSum = 0; let speedCount = 0;
 let playbackIdx = 0; let playbackTimer = null;
 
-// SIFIR BLOKAJ - DOĞRUDAN PANEL GEÇİŞİ
 function directSkipToDashboard() {
   document.getElementById('selection-screen').style.display = 'none';
   document.getElementById('main-app').style.display = 'block';
@@ -355,12 +387,11 @@ function directSkipToDashboard() {
   }
 }
 
-// ARKA PLANDA SENSÖR ATEŞLEYİCİ (KİLİTLEME YAPMAYAN MODEL)
 function initHardwareSensorsLazy() {
   if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
     DeviceOrientationEvent.requestPermission().then(() => {
       bindMotionStreamListener();
-    }).catch(e => console.log("Sensör izni ertelendi:", e));
+    }).catch(e => console.log("Sensör gecikmesi:", e));
   } else {
     bindMotionStreamListener();
   }
@@ -398,13 +429,6 @@ function calculateMotionStream(e) {
 
   if (currentAppFlowState === 'recording') {
     sessionTotalG += netG; sessionCount++;
-    
-    if (currentSpeedKmh === 0) {
-      let calcSpeed = 40 + Math.sin(Date.now() / 3000) * 10;
-      if (netG > 0.20) calcSpeed -= (netG * 15); 
-      currentSpeedKmh = Math.max(0, Math.round(calcSpeed));
-    }
-    
     if (netG > sessionMaxG) {
       sessionMaxG = netG;
       document.getElementById('ride-peak-label').textContent = `En Yüksek: ${sessionMaxG.toFixed(2)} G`;
@@ -478,14 +502,11 @@ function computeHaversineDistance(lat1, lon1, lat2, lon2) {
   return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
 }
 
-// Merkezi Buton Yönetimi
 function handleMainButtonClick() {
   const btn = document.getElementById('btn-ride-toggle');
 
   if (currentAppFlowState === 'ready') {
     currentAppFlowState = 'recording';
-    
-    // Güvenli tetikleyici: İvmeölçeri kullanıcı dokunuşuyla şimdi aktif et
     initHardwareSensorsLazy();
 
     driveSessionData = []; sessionMaxG = 0; sessionTotalG = 0; sessionCount = 0;
@@ -512,7 +533,6 @@ function handleMainButtonClick() {
       document.getElementById('metric-duration').textContent = formatTime(diff);
     }, 1000);
 
-    // GERÇEK ZAMANLI KESİNTİSİZ SAF GPS ENTEGRASYONU
     if (navigator.geolocation) {
       watchId = navigator.geolocation.watchPosition(
         (pos) => {
@@ -525,15 +545,11 @@ function handleMainButtonClick() {
               let prev = driveSessionData[driveSessionData.length - 1];
               let dist = computeHaversineDistance(prev.lat, prev.lon, pos.coords.latitude, pos.coords.longitude);
               let timeDiffSec = (Date.now() - prev.timestamp) / 1000;
-              if (timeDiffSec > 0 && dist > 0.1) {
-                currentSpeedKmh = Math.round((dist / timeDiffSec) * 3.6);
-              }
+              if (timeDiffSec > 0 && dist > 0.1) currentSpeedKmh = Math.round((dist / timeDiffSec) * 3.6);
             }
           }
           
-          speedSum += currentSpeedKmh;
-          speedCount++;
-          
+          speedSum += currentSpeedKmh; speedCount++;
           document.getElementById('metric-speed').textContent = `${currentSpeedKmh} km/s`;
           
           driveSessionData.push({ 
@@ -543,12 +559,9 @@ function handleMainButtonClick() {
             speed: currentSpeedKmh,
             timestamp: Date.now()
           });
-          
           calculateTotalDistanceUI();
         },
-        (err) => {
-          console.warn("GPS Durumu:", err.message);
-        }, 
+        (err) => console.warn("GPS:", err.message), 
         { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
       );
     }
@@ -560,7 +573,7 @@ function handleMainButtonClick() {
     
     document.getElementById('ride-badge').textContent = 'BİTTİ'; 
     document.getElementById('ride-badge').className = 'card-badge badge-warn';
-    document.getElementById('ride-label').textContent = 'Sürüş tamamlandı. Güzergah simülasyonu aşağıda hazır.';
+    document.getElementById('ride-label').textContent = 'Sürüş tamamlandı. Güzergah analizi hazır.';
 
     document.getElementById('speed-label-type').textContent = 'Ortalama Hız';
     document.getElementById('metric-speed').style.color = 'var(--accent3)';
@@ -572,7 +585,6 @@ function handleMainButtonClick() {
     }
     
     document.getElementById('metric-speed').textContent = `${avgSpeed} km/s`;
-
     processRideFeedbackReport(avgSpeed);
 
     document.getElementById('map-wrap').style.display = 'block';
@@ -584,7 +596,7 @@ function handleMainButtonClick() {
   } 
   else if (currentAppFlowState === 'summary') {
     currentAppFlowState = 'playing';
-    btn.textContent = '🔄 Yeniden Başlat / Yeni Sürüş'; 
+    btn.textContent = '🔄 Yeniden Başlat'; 
     btn.className = 'ride-btn btn-start';
     startAnimatedPlayback();
   }
@@ -617,16 +629,12 @@ function processRideFeedbackReport(finalAvgSpeed) {
   if(box) box.style.display = 'block';
 
   let timeStr = formatTime(totalTimeMs);
-  let baseReport = `Sürüş Süresi: ${timeStr} | Ortalama Hızınız: ${finalAvgSpeed} km/s. `;
+  let baseReport = `Sürüş Süresi: ${timeStr} | Ortalama Sürat: ${finalAvgSpeed} km/s. `;
 
   if(textEl) {
-    if (score >= 82) {
-      textEl.textContent = baseReport + `Harika! Akıcı ve konforlu bir güzergâh tamamlandı. Ortalama sarsıntınız oldukça düşüktü (${avgG.toFixed(2)} G). Rota boyunca ciddi bir aksaklığa rastlanmadı.`;
-    } else if (score >= 60) {
-      textEl.textContent = baseReport + `Standart şehir içi yol deneyimi. Rota üzerinde sarı tonlu bölgelerde minör sarsıntılar ve tümsek salınımları (${sessionMaxG.toFixed(2)} G tepe noktası) kaydedildi.`;
-    } else {
-      textEl.textContent = baseReport + `⚠️ Bozuk yol profili! Rota üzerinde yüksek dikey ivmeli dalgalanmalar saptandı. Sürüş konforu kritik eşiğin altına düşmüş.`;
-    }
+    if (score >= 82) textEl.textContent = baseReport + `Harika! Akıcı bir konfor sağlandı.`;
+    else if (score >= 60) textEl.textContent = baseReport + `Standart şehir içi yol profili, tümsek geçişleri saptandı.`;
+    else textEl.textContent = baseReport + `⚠️ Kritik düzeyde bozuk yol ve dikey ivmelenme kaydedildi!`;
   }
 }
 
@@ -647,36 +655,27 @@ function injectMockupTelemetryRoute(computedAvg) {
   calculateTotalDistanceUI();
 }
 
-// --- ANIMATED PLAYBACK ENGINE ---
 function startAnimatedPlayback() {
   if (driveSessionData.length < 2) return;
-  
   playbackIdx = 0;
   document.getElementById('panel-label').textContent = 'TEKRAR OYNATILIYOR';
   document.getElementById('ride-badge').textContent = 'ANİMASYON';
   document.getElementById('ride-badge').className = 'card-badge badge-playback';
-  document.getElementById('unit-label').textContent = 'Oynatım Sarsıntı Kuvveti (G)';
-  document.getElementById('map-status-overlay').textContent = 'GÜZERGAH TEKRAR OYNATIMI (GERÇEK VERİ)';
-  document.getElementById('speed-label-type').textContent = 'Anlık Sürat (Replay)';
 
   if (playbackTimer) clearInterval(playbackTimer);
   
   playbackTimer = setInterval(() => {
-    if (playbackIdx >= driveSessionData.length) {
-       playbackIdx = 0; 
-    }
+    if (playbackIdx >= driveSessionData.length) playbackIdx = 0; 
     
     let activePoint = driveSessionData[playbackIdx];
     document.getElementById('ride-value').textContent = activePoint.gForce.toFixed(2);
     document.getElementById('metric-speed').textContent = `${activePoint.speed} km/s`;
     
-    if(selectedGraphMode === 'mesh') {
-      animateVehicleGraphic(activePoint.gForce);
-    } else {
+    if(selectedGraphMode === 'mesh') animateVehicleGraphic(activePoint.gForce);
+    else {
       waveDataHistory.push(activePoint.gForce); waveDataHistory.shift();
       drawWaveGraphFrame(activePoint.gForce);
     }
-    
     renderVectorMapRoute(playbackIdx);
     playbackIdx++;
   }, 100);
@@ -720,7 +719,7 @@ function renderVectorMapRoute(currentProgressIdx) {
   if(driveSessionData[currentProgressIdx]) {
     let coord = toCanvasCoords(driveSessionData[currentProgressIdx].lat, driveSessionData[currentProgressIdx].lon);
     ctx.beginPath(); ctx.arc(coord.x, coord.y, 7, 0, Math.PI * 2); ctx.fillStyle = '#7c6af7';
-    ctx.shadowBlur = 12; ctx.shadowColor = '#7c6af7'; ctx.fill(); ctx.shadowBlur = 0;
+    ctx.fill();
   }
 }
 
@@ -736,11 +735,8 @@ function restartApp() {
   document.getElementById('selection-screen').style.display = 'flex';
   
   document.getElementById('panel-label').textContent = 'Anlık Durum';
-  document.getElementById('unit-label').textContent = 'Anlık Sarsıntı İvmesi (G)';
-  document.getElementById('speed-label-type').textContent = 'Mevcut Hız';
   document.getElementById('metric-speed').style.color = 'var(--accent2)';
   document.getElementById('metric-speed').textContent = '0 km/s';
-
   document.getElementById('ride-badge').textContent = 'Hazır';
   document.getElementById('ride-badge').className = 'card-badge badge-warn';
   
