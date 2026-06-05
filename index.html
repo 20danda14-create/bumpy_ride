@@ -207,6 +207,21 @@
     line-height: 1.4;
   }
 
+  .perm-btn {
+    width: 100%;
+    padding: 16px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: var(--sans);
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  .perm-btn:hover { opacity: 0.88; }
+
   /* --- APP MAIN --- */
   .app {
     position: relative;
@@ -259,3 +274,125 @@
   }
 
   .feedback-box { background: rgba(124,106,247,0.06); border: 1px solid rgba(124,106,247,0.2); border-radius: var(--radius-sm); padding: 14px; margin-top: 16px; display: none; }
+  .feedback-title { font-size: 13px; font-weight: 700; color: var(--accent2); margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
+  .feedback-text { font-size: 12px; font-family: var(--mono); color: var(--text2); line-height: 1.5; }
+
+  .ride-btn-group { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 16px; }
+  .ride-btn { padding: 14px; border: none; border-radius: var(--radius-sm); font-family: var(--sans); font-weight: 600; font-size: 14px; cursor: pointer; text-align: center;}
+  .btn-start { background: var(--accent2); color: #0a0a0f; }
+  .btn-stop { background: var(--danger); color: #fff; }
+  
+  .config-panel { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+  .restart-btn { background: none; border: 1px solid var(--border); color: var(--text3); font-family: var(--mono); font-size: 11px; padding: 4px 10px; border-radius: 4px; cursor: pointer; }
+
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+</style>
+</head>
+<body>
+
+<div id="intro-screen">
+  <div class="intro-logo-wrap">
+    <div class="intro-title">BUMPY RIDE</div>
+    <div class="intro-subtitle">Sürüş Analiz Laboratuvarı</div>
+  </div>
+  <div class="intro-loader-container">
+    <div class="intro-loader-bar"></div>
+  </div>
+  <div class="intro-status" id="intro-status-text">Analiz motoru başlatılıyor...</div>
+</div>
+
+<div id="selection-screen" style="display:none;">
+  <div class="select-card">
+    <div class="select-title">Konfigürasyon Havuzu</div>
+    <div class="select-desc">Parametreleri belirleyip donanımları ateşleyin:</div>
+    
+    <div class="section-divider">1. Araç Simge Tipi</div>
+    <div class="vehicle-options">
+      <div class="option-box selected" id="opt-sedan" onclick="selectVehicleType('sedan')">
+        <div class="option-svg">
+          <svg viewBox="0 0 120 50">
+            <path d="M10,35 L22,35 C24,30 30,30 32,35 L82,35 C84,30 90,30 92,35 L112,35 L110,27 C108,23 101,21 93,20 L76,17 L44,17 L24,23 L12,27 Z" fill="#3b82f6" />
+            <circle cx="27" cy="35" r="5.5" fill="#0a0a0f" stroke="#fff" stroke-width="1.5" />
+            <circle cx="87" cy="35" r="5.5" fill="#0a0a0f" stroke="#fff" stroke-width="1.5" />
+          </svg>
+        </div>
+        <div class="option-name">Mavi Sedan</div>
+      </div>
+      
+      <div class="option-box" id="opt-suv" onclick="selectVehicleType('suv')">
+        <div class="option-svg">
+          <svg viewBox="0 0 120 50">
+            <path d="M8,35 L20,35 C22,29 29,29 31,35 L81,35 C83,29 90,29 92,35 L114,35 L113,24 C112,20 106,18 98,18 L88,14 L42,14 L20,20 L10,24 Z" fill="#ef4444" />
+            <circle cx="25.5" cy="35" r="6.5" fill="#0a0a0f" stroke="#fff" stroke-width="1.5" />
+            <circle cx="86.5" cy="35" r="6.5" fill="#0a0a0f" stroke="#fff" stroke-width="1.5" />
+          </svg>
+        </div>
+        <div class="option-name">Kırmızı SUV</div>
+      </div>
+    </div>
+
+    <div class="section-divider">2. Panel Ekran Grafiği</div>
+    <div class="vehicle-options">
+      <div class="option-box selected" id="opt-g-mesh" onclick="selectGraphType('mesh')">
+        <div style="font-size: 24px; margin-bottom: 6px;">🚗</div>
+        <div class="option-name">Araç Animasyonu</div>
+      </div>
+      <div class="option-box" id="opt-g-wave" onclick="selectGraphType('wave')">
+        <div style="font-size: 24px; margin-bottom: 6px;">📈</div>
+        <div class="option-name">İvme Dalga Grafiği</div>
+      </div>
+    </div>
+
+    <div class="perm-notice-box">
+      • İvmeölçer donanımı sarsıntı hesabı için kalibre edilecektir.<br>
+      • GPS uyduları güzergah takibi için aktif hale getirilir.
+    </div>
+
+    <button class="perm-btn" style="margin-top: 20px;" onclick="requestCorePermissions()">Sistemleri Başlat ve Kalibre Et</button>
+  </div>
+</div>
+
+<div class="app" id="main-app" style="display:none;">
+  <div class="header">
+    <div class="logo">Bumpy Ride Engine v4.1</div>
+    <div class="title">Sürüş Analitiği</div>
+  </div>
+
+  <div class="config-panel">
+    <button class="restart-btn" onclick="restartApp()">↺ Modeli Yeniden Seç</button>
+  </div>
+
+  <div class="grid">
+    <div class="card" id="ride-card">
+      <div class="card-header">
+        <div class="card-label" id="panel-label">Anlık Durum</div>
+        <div class="card-badge badge-warn" id="ride-badge">Hazır</div>
+      </div>
+      
+      <div style="display: flex; justify-content: space-between; align-items: baseline;">
+        <div class="db-value" id="ride-value">0.00</div>
+        <div class="angle-key" style="font-size: 11px; color: var(--text3); font-family: var(--mono)" id="ride-peak-label">En Yüksek: 0.00 G</div>
+      </div>
+      <div class="db-unit" id="unit-label">Anlık Sarsıntı İvmesi (G)</div>
+      
+      <div class="metrics-row-triple">
+        <div class="metric-subbox">
+          <div class="m-lbl">Mesafe</div>
+          <div class="m-val" id="metric-distance">0 m</div>
+        </div>
+        <div class="metric-subbox">
+          <div class="m-lbl">Süre (Sürüş)</div>
+          <div class="m-val" id="metric-duration" style="color: var(--accent2);">00:00:00</div>
+        </div>
+        <div class="metric-subbox">
+          <div class="m-lbl">Konum Noktası</div>
+          <div class="m-val" id="metric-gps-count">00 Node</div>
+        </div>
+      </div>
+
+      <div class="visual-container">
+        <div class="vehicle-svg-wrap" id="vehicle-mesh"></div>
+        <canvas id="wave-canvas"></canvas>
+      </div>
+
+      <div class="db-label" id="ride-label" style="
