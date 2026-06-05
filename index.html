@@ -21,10 +21,30 @@
   .metric { background:#1a1a26; padding:10px; border-radius:8px; text-align:center; }
   .metric h4 { margin:0; font-size:12px; color:#7c6af7; }
   .metric p { margin:4px 0 0; font-size:16px; font-weight:700; }
+  #selection-screen { position:fixed; inset:0; background:#0a0a0f; display:flex; align-items:center; justify-content:center; z-index:100; }
+  .select-card { background:#12121a; padding:20px; border-radius:12px; max-width:400px; text-align:center; }
+  .option-box { background:#1a1a26; border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:10px; cursor:pointer; margin:6px; }
+  .option-box.selected { border-color:#7c6af7; background:rgba(124,106,247,0.1); }
 </style>
 </head>
 <body>
-<div class="app">
+<div id="selection-screen">
+  <div class="select-card">
+    <h3>Grafik Tipi Seç</h3>
+    <div id="graph-options">
+      <div class="option-box selected" onclick="selectGraph('mesh')">🚗 Araç Animasyonu</div>
+      <div class="option-box" onclick="selectGraph('wave')">📈 Dalga Grafiği</div>
+    </div>
+    <h3>Araç Tipi Seç</h3>
+    <div id="vehicle-options">
+      <div class="option-box selected" onclick="selectVehicle('sedan')">🚙 Sedan</div>
+      <div class="option-box" onclick="selectVehicle('suv')">🚘 SUV</div>
+    </div>
+    <button class="ride-btn btn-start" onclick="goToDashboard()">İleri ve Modeli Kilitle</button>
+  </div>
+</div>
+
+<div class="app" id="dashboard" style="display:none;">
   <div class="header">
     <div class="title">Bumpy Ride</div>
     <p>Sürüş Analitiği ve Konfor Takibi</p>
@@ -49,6 +69,22 @@
 <script>
 let map, marker, watchId, startTime, speedData=[], shakeData=[];
 let ctx=document.getElementById("shakeGraph").getContext("2d");
+let selectedGraph="mesh", selectedVehicle="sedan";
+
+function selectGraph(type){
+  selectedGraph=type;
+  document.querySelectorAll("#graph-options .option-box").forEach(el=>el.classList.remove("selected"));
+  event.target.classList.add("selected");
+}
+function selectVehicle(type){
+  selectedVehicle=type;
+  document.querySelectorAll("#vehicle-options .option-box").forEach(el=>el.classList.remove("selected"));
+  event.target.classList.add("selected");
+}
+function goToDashboard(){
+  document.getElementById("selection-screen").style.display="none";
+  document.getElementById("dashboard").style.display="block";
+}
 
 function initMap(lat=39.9334,lng=32.8597){
   map=L.map('map').setView([lat,lng],13);
@@ -73,7 +109,7 @@ function startRide(){
       let elapsed=(Date.now()-startTime)/1000;
       document.getElementById("rideTime").textContent=elapsed.toFixed(0)+" sn";
       updateComfort();
-    },err=>{console.log("GPS Hatası",err);});
+    });
   }
   window.addEventListener("devicemotion",motionHandler);
 }
@@ -104,18 +140,21 @@ function drawGraph(val){
   ctx.fillStyle="#1a1a26";
   ctx.fillRect(0,0,ctx.canvas.width,ctx.canvas.height);
   ctx.fillStyle="#3dd6ac";
-  ctx.fillRect(shakeData.length%ctx.canvas.width,ctx.canvas.height-val*2,2,2);
+  if(selectedGraph==="wave"){
+    ctx.fillRect(shakeData.length%ctx.canvas.width,ctx.canvas.height-val*2,2,2);
+  }
+  else if(selectedGraph==="mesh"){
+    ctx.font="30px Arial";
+    ctx.fillText(selectedVehicle==="sedan"?"🚙":"🚘",50,80+Math.sin(val)*5);
+  }
 }
 
 function updateComfort(){
   if(shakeData.length>0){
     let avgShake=shakeData.reduce((a,b)=>a+b,0)/shakeData.length;
-    // Yerçekimi ~9.8 m/s², bunun üzerindeki dalgalanmaları sarsıntı kabul edelim
     let excessShake = Math.max(0, avgShake - 9.8);
     let comfort = Math.max(0, 100 - excessShake*8); 
     document.getElementById("comfort").textContent = comfort.toFixed(0)+"%";
   }
 }
-</script>
-</body>
-</html>
+</
