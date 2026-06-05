@@ -32,13 +32,13 @@
   <div class="select-card">
     <h3>Grafik Tipi Seç</h3>
     <div id="graph-options">
-      <div class="option-box selected" onclick="selectGraph(event,'mesh')">🚗 Araç Animasyonu</div>
-      <div class="option-box" onclick="selectGraph(event,'wave')">📈 Dalga Grafiği</div>
+      <div class="option-box selected" onclick="selectGraph(this,'mesh')">🚗 Araç Animasyonu</div>
+      <div class="option-box" onclick="selectGraph(this,'wave')">📈 Dalga Grafiği</div>
     </div>
     <h3>Araç Tipi Seç</h3>
     <div id="vehicle-options">
-      <div class="option-box selected" onclick="selectVehicle(event,'sedan')">🚙 Sedan</div>
-      <div class="option-box" onclick="selectVehicle(event,'suv')">🚘 SUV</div>
+      <div class="option-box selected" onclick="selectVehicle(this,'sedan')">🚙 Sedan</div>
+      <div class="option-box" onclick="selectVehicle(this,'suv')">🚘 SUV</div>
     </div>
     <button class="ride-btn btn-start" onclick="goToDashboard()">İleri ve Modeli Kilitle</button>
   </div>
@@ -71,15 +71,15 @@ let map, marker, watchId, startTime, speedData=[], shakeData=[];
 let ctx=document.getElementById("shakeGraph").getContext("2d");
 let selectedGraph="mesh", selectedVehicle="sedan";
 
-function selectGraph(ev,type){
+function selectGraph(el,type){
   selectedGraph=type;
-  document.querySelectorAll("#graph-options .option-box").forEach(el=>el.classList.remove("selected"));
-  ev.currentTarget.classList.add("selected");
+  document.querySelectorAll("#graph-options .option-box").forEach(opt=>opt.classList.remove("selected"));
+  el.classList.add("selected");
 }
-function selectVehicle(ev,type){
+function selectVehicle(el,type){
   selectedVehicle=type;
-  document.querySelectorAll("#vehicle-options .option-box").forEach(el=>el.classList.remove("selected"));
-  ev.currentTarget.classList.add("selected");
+  document.querySelectorAll("#vehicle-options .option-box").forEach(opt=>opt.classList.remove("selected"));
+  el.classList.add("selected");
 }
 function goToDashboard(){
   document.getElementById("selection-screen").style.display="none";
@@ -154,4 +154,7 @@ function updateComfort(){
     let avgShake=shakeData.reduce((a,b)=>a+b,0)/shakeData.length;
     let excessShake = Math.max(0, avgShake - 9.8);
     let comfort = Math.max(0, 100 - excessShake*8); 
-    document.getElementById
+    document.getElementById("comfort").textContent = comfort.toFixed(0)+"%";
+  }
+}
+</script
