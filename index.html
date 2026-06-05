@@ -125,7 +125,7 @@
     width: 0%;
     background: linear-gradient(90deg, var(--accent), var(--accent2));
     border-radius: 2px;
-    animation: fillLoader 1.8s cubic-bezier(0.1, 0.85, 0.25, 1) forwards;
+    animation: fillLoader 1.6s cubic-bezier(0.1, 0.85, 0.25, 1) forwards;
   }
 
   @keyframes fillLoader {
@@ -207,7 +207,6 @@
     line-height: 1.4;
   }
 
-  /* BURASI EKSİKTİ - EKLENDİ VE GÜVENLİ HALE GETİRİLDİ */
   .perm-btn {
     width: 100%;
     padding: 16px;
@@ -253,4 +252,361 @@
 
   /* 3lü Metrik Satırı (Kronometre Dahil) */
   .metrics-row-triple { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px; }
-  .metric-subbox { background: rgba(2
+  .metric-subbox { background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 4px; text-align: center; }
+  .metric-subbox .m-lbl { font-size: 9px; font-family: var(--mono); color: var(--text3); text-transform: uppercase; margin-bottom: 4px; }
+  .metric-subbox .m-val { font-size: 13px; font-family: var(--mono); font-weight: 700; color: var(--text); white-space: nowrap; }
+
+  /* Dynamic Canvas / Graphic Screen Container */
+  .visual-container {
+    background: var(--surface2); border-radius: var(--radius-sm); height: 110px; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; margin: 12px 0; border: 1px solid rgba(255,255,255,0.03);
+  }
+  .vehicle-svg-wrap { width: 130px; height: 55px; transition: transform 0.05s ease-out; transform-origin: center center; display: none; }
+  .vehicle-svg-wrap svg { width: 100%; height: 100%; }
+  #wave-canvas { width: 100%; height: 100%; display: none; }
+
+  /* Dynamic Custom Map Canvas Area */
+  .map-container {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); height: 220px; margin-top: 16px; position: relative; overflow: hidden; display: none;
+  }
+  #map-canvas { width: 100%; height: 100%; display: block; }
+  
+  .map-overlay-title {
+    position: absolute; top: 10px; left: 10px; background: rgba(10,10,15,0.85); padding: 4px 8px; border-radius: 4px; font-size: 10px; font-family: var(--mono); color: var(--text2); border: 1px solid var(--border); pointer-events: none;
+  }
+
+  .feedback-box { background: rgba(124,106,247,0.06); border: 1px solid rgba(124,106,247,0.2); border-radius: var(--radius-sm); padding: 14px; margin-top: 16px; display: none; }
+  .feedback-title { font-size: 13px; font-weight: 700; color: var(--accent2); margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
+  .feedback-text { font-size: 12px; font-family: var(--mono); color: var(--text2); line-height: 1.5; }
+
+  .ride-btn-group { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 16px; }
+  .ride-btn { padding: 14px; border: none; border-radius: var(--radius-sm); font-family: var(--sans); font-weight: 600; font-size: 14px; cursor: pointer; text-align: center;}
+  .btn-start { background: var(--accent2); color: #0a0a0f; }
+  .btn-stop { background: var(--danger); color: #fff; }
+  
+  .config-panel { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+  .restart-btn { background: none; border: 1px solid var(--border); color: var(--text3); font-family: var(--mono); font-size: 11px; padding: 4px 10px; border-radius: 4px; cursor: pointer; }
+
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+</style>
+</head>
+<body>
+
+<div id="intro-screen">
+  <div class="intro-logo-wrap">
+    <div class="intro-title">BUMPY RIDE</div>
+    <div class="intro-subtitle">Sürüş Analiz Laboratuvarı</div>
+  </div>
+  <div class="intro-loader-container">
+    <div class="intro-loader-bar"></div>
+  </div>
+  <div class="intro-status" id="intro-status-text">Analiz motoru başlatılıyor...</div>
+</div>
+
+<div id="selection-screen" style="display:none;">
+  <div class="select-card">
+    <div class="select-title">Konfigürasyon Havuzu</div>
+    <div class="select-desc">Parametreleri belirleyip donanımları ateşleyin:</div>
+    
+    <div class="section-divider">1. Araç Simge Tipi</div>
+    <div class="vehicle-options">
+      <div class="option-box selected" id="opt-sedan" onclick="selectVehicleType('sedan')">
+        <div class="option-svg">
+          <svg viewBox="0 0 120 50">
+            <path d="M10,35 L22,35 C24,30 30,30 32,35 L82,35 C84,30 90,30 92,35 L112,35 L110,27 C108,23 101,21 93,20 L76,17 L44,17 L24,23 L12,27 Z" fill="#3b82f6" />
+            <circle cx="27" cy="35" r="5.5" fill="#0a0a0f" stroke="#fff" stroke-width="1.5" />
+            <circle cx="87" cy="35" r="5.5" fill="#0a0a0f" stroke="#fff" stroke-width="1.5" />
+          </svg>
+        </div>
+        <div class="option-name">Mavi Sedan</div>
+      </div>
+      
+      <div class="option-box" id="opt-suv" onclick="selectVehicleType('suv')">
+        <div class="option-svg">
+          <svg viewBox="0 0 120 50">
+            <path d="M8,35 L20,35 C22,29 29,29 31,35 L81,35 C83,29 90,29 92,35 L114,35 L113,24 C112,20 106,18 98,18 L88,14 L42,14 L20,20 L10,24 Z" fill="#ef4444" />
+            <circle cx="25.5" cy="35" r="6.5" fill="#0a0a0f" stroke="#fff" stroke-width="1.5" />
+            <circle cx="86.5" cy="35" r="6.5" fill="#0a0a0f" stroke="#fff" stroke-width="1.5" />
+          </svg>
+        </div>
+        <div class="option-name">Kırmızı SUV</div>
+      </div>
+    </div>
+
+    <div class="section-divider">2. Panel Ekran Grafiği</div>
+    <div class="vehicle-options">
+      <div class="option-box selected" id="opt-g-mesh" onclick="selectGraphType('mesh')">
+        <div style="font-size: 24px; margin-bottom: 6px;">🚗</div>
+        <div class="option-name">Araç Animasyonu</div>
+      </div>
+      <div class="option-box" id="opt-g-wave" onclick="selectGraphType('wave')">
+        <div style="font-size: 24px; margin-bottom: 6px;">📈</div>
+        <div class="option-name">İvme Dalga Grafiği</div>
+      </div>
+    </div>
+
+    <div class="perm-notice-box">
+      • İvmeölçer donanımı sarsıntı hesabı için kalibre edilecektir.<br>
+      • GPS uyduları güzergah takibi için aktif hale getirilir.
+    </div>
+
+    <button class="perm-btn" onclick="requestCorePermissions()">Sistemleri Başlat ve Kalibre Et</button>
+  </div>
+</div>
+
+<div class="app" id="main-app" style="display:none;">
+  <div class="header">
+    <div class="logo">Bumpy Ride Engine v4.3</div>
+    <div class="title">Sürüş Analitiği</div>
+  </div>
+
+  <div class="config-panel">
+    <button class="restart-btn" onclick="restartApp()">↺ Modeli Yeniden Seç</button>
+  </div>
+
+  <div class="grid">
+    <div class="card" id="ride-card">
+      <div class="card-header">
+        <div class="card-label" id="panel-label">Anlık Durum</div>
+        <div class="card-badge badge-warn" id="ride-badge">Hazır</div>
+      </div>
+      
+      <div style="display: flex; justify-content: space-between; align-items: baseline;">
+        <div class="db-value" id="ride-value">0.00</div>
+        <div class="angle-key" style="font-size: 11px; color: var(--text3); font-family: var(--mono)" id="ride-peak-label">En Yüksek: 0.00 G</div>
+      </div>
+      <div class="db-unit" id="unit-label">Anlık Sarsıntı İvmesi (G)</div>
+      
+      <div class="metrics-row-triple">
+        <div class="metric-subbox">
+          <div class="m-lbl">Mesafe</div>
+          <div class="m-val" id="metric-distance">0 m</div>
+        </div>
+        <div class="metric-subbox">
+          <div class="m-lbl">Süre (Sürüş)</div>
+          <div class="m-val" id="metric-duration" style="color: var(--accent2);">00:00:00</div>
+        </div>
+        <div class="metric-subbox">
+          <div class="m-lbl">Konum Noktası</div>
+          <div class="m-val" id="metric-gps-count">00 Node</div>
+        </div>
+      </div>
+
+      <div class="visual-container">
+        <div class="vehicle-svg-wrap" id="vehicle-mesh"></div>
+        <canvas id="wave-canvas"></canvas>
+      </div>
+
+      <div class="db-label" id="ride-label" style="text-align: center; font-size: 12px; font-family: var(--mono); color: var(--text2);">Sürüşü başlatıp yola çıkın.</div>
+
+      <div class="map-container" id="map-wrap">
+        <div class="map-overlay-title" id="map-status-overlay">GÜZERGAH TEKRAR OYNATIMI (HIZLANDIRILMIŞ)</div>
+        <canvas id="map-canvas"></canvas>
+      </div>
+
+      <div class="feedback-box" id="ride-feedback">
+        <div class="feedback-title">
+          <span>📋 Sürüş Konfor Özeti</span>
+          <span id="feedback-score" style="color: var(--accent3); font-family: var(--mono); font-weight: bold;">Skor: --</span>
+        </div>
+        <div class="feedback-text" id="feedback-text">Analiz raporu bekleniyor...</div>
+      </div>
+
+      <div class="ride-btn-group">
+        <button class="ride-btn btn-start" id="btn-ride-toggle" onclick="toggleRideAnalysis()">Sürüşü Başlat</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// --- INTRO SCREEN AUTOMATION ---
+document.addEventListener("DOMContentLoaded", () => {
+  const steps = ["Telemetri modülleri yükleniyor...", "GPS ağ geçitleri taranıyor...", "Bumpy Ride kalibrasyonu tamamlandı."];
+  let idx = 0; const txt = document.getElementById("intro-status-text");
+  
+  const timer = setInterval(() => { 
+    if (txt && idx < steps.length - 1) { 
+      idx++; 
+      txt.textContent = steps[idx]; 
+    } 
+  }, 450);
+
+  setTimeout(() => {
+    clearInterval(timer);
+    const scr = document.getElementById("intro-screen");
+    if(scr) {
+      scr.style.opacity = "0"; 
+      scr.style.transform = "scale(1.02)";
+      setTimeout(() => { 
+        scr.style.display = "none"; 
+        const selectScr = document.getElementById("selection-screen");
+        if(selectScr) selectScr.style.display = "flex"; 
+      }, 400);
+    }
+  }, 1500);
+});
+
+// App Core State Engine
+let selectedModelType = 'sedan';
+let selectedGraphMode = 'mesh'; 
+let waveDataHistory = Array(40).fill(0);
+
+const sedanSVG = `<svg viewBox="0 0 120 50"><path id="vehicle-body" d="M10,35 L22,35 C24,30 30,30 32,35 L82,35 C84,30 90,30 92,35 L112,35 L110,27 C108,23 101,21 93,20 L76,17 L44,17 L24,23 L12,27 Z" fill="#3b82f6" /><circle cx="27" cy="35" r="5.5" fill="#0a0a0f" stroke="#3dd6ac" stroke-width="1.5" /><circle cx="87" cy="35" r="5.5" fill="#0a0a0f" stroke="#3dd6ac" stroke-width="1.5" /></svg>`;
+const suvSVG = `<svg viewBox="0 0 120 50"><path id="vehicle-body" d="M8,35 L20,35 C22,29 29,29 31,35 L81,35 C83,29 90,29 92,35 L114,35 L113,24 C112,20 106,18 98,18 L88,14 L42,14 L20,20 L10,24 Z" fill="#ef4444" /><circle cx="25.5" cy="35" r="6.5" fill="#0a0a0f" stroke="#3dd6ac" stroke-width="1.5" /><circle cx="86.5" cy="35" r="6.5" fill="#0a0a0f" stroke="#3dd6ac" stroke-width="1.5" /></svg>`;
+
+function selectVehicleType(type) {
+  selectedModelType = type;
+  const sBtn = document.getElementById('opt-sedan');
+  const suvBtn = document.getElementById('opt-suv');
+  if(sBtn) sBtn.classList.toggle('selected', type === 'sedan');
+  if(suvBtn) suvBtn.classList.toggle('selected', type === 'suv');
+}
+
+function selectGraphType(mode) {
+  selectedGraphMode = mode;
+  const mBtn = document.getElementById('opt-g-mesh');
+  const wBtn = document.getElementById('opt-g-wave');
+  if(mBtn) mBtn.classList.toggle('selected', mode === 'mesh');
+  if(wBtn) wBtn.classList.toggle('selected', mode === 'wave');
+}
+
+// Telemetry & Hardware Variables
+let watchId = null; let isRideActive = false; let currentNetG = 0;
+let rideStartTime = null; let durationTimer = null;
+let driveSessionData = [];
+let sessionMaxG = 0; let sessionTotalG = 0; let sessionCount = 0;
+let isPlaybackActive = false; let playbackIdx = 0; let playbackTimer = null;
+
+async function requestCorePermissions() {
+  if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+    try {
+      const motionPerm = await DeviceOrientationEvent.requestPermission();
+      if (motionPerm !== 'granted') { alert('Sensör izni reddedildi.'); return; }
+    } catch (e) { alert('Sensör katmanı başlatılamadı.'); return; }
+  }
+
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      () => { launchMainDashboard(); },
+      (err) => { alert('GPS Konum kilidi kapalı. Simülasyon modu aktif edilecek.'); launchMainDashboard(); }
+    );
+  } else {
+    launchMainDashboard();
+  }
+}
+
+function launchMainDashboard() {
+  const selectScr = document.getElementById('selection-screen');
+  const mainApp = document.getElementById('main-app');
+  if(selectScr) selectScr.style.display = 'none';
+  if(mainApp) mainApp.style.display = 'block';
+
+  const meshEl = document.getElementById('vehicle-mesh');
+  const waveCanvas = document.getElementById('wave-canvas');
+
+  if(selectedGraphMode === 'mesh') {
+    if(meshEl) { meshEl.style.display = 'block'; meshEl.innerHTML = selectedModelType === 'sedan' ? sedanSVG : suvSVG; }
+    if(waveCanvas) waveCanvas.style.display = 'none';
+  } else {
+    if(meshEl) meshEl.style.display = 'none'; 
+    if(waveCanvas) {
+      waveCanvas.style.display = 'block';
+      drawWaveGraphFrame(0); // ARTIK RISK YOK, DOĞRUDAN ÇALIŞIR
+    }
+  }
+
+  if (window.DeviceMotionEvent) {
+    window.removeEventListener('devicemotion', calculateMotionStream, true);
+    window.addEventListener('devicemotion', calculateMotionStream, true);
+  }
+}
+
+function calculateMotionStream(e) {
+  if (isPlaybackActive) return;
+
+  let acc = e.accelerationIncludingGravity || e.acceleration;
+  if (!acc || acc.x === null) return;
+
+  let rawForce = Math.sqrt(acc.x * acc.x + acc.y * acc.y + acc.z * acc.z);
+  let gForce = rawForce / 9.80665;
+  let netG = Math.abs(gForce - 1.0);
+  
+  if (netG < 0.04) netG = 0;
+  currentNetG = netG;
+
+  const valEl = document.getElementById('ride-value');
+  if(valEl) valEl.textContent = netG.toFixed(2);
+  
+  if(selectedGraphMode === 'mesh') {
+    animateVehicleGraphic(netG);
+  } else {
+    waveDataHistory.push(netG); 
+    waveDataHistory.shift();
+    drawWaveGraphFrame(netG);
+  }
+
+  if (isRideActive) {
+    sessionTotalG += netG; sessionCount++;
+    if (netG > sessionMaxG) {
+      sessionMaxG = netG;
+      const peakEl = document.getElementById('ride-peak-label');
+      if(peakEl) peakEl.textContent = `En Yüksek: ${sessionMaxG.toFixed(2)} G`;
+    }
+  }
+}
+
+function animateVehicleGraphic(gVal) {
+  const mesh = document.getElementById('vehicle-mesh');
+  const body = document.getElementById('vehicle-body');
+  if(!mesh || !body) return;
+  
+  if (gVal > 0) {
+    let shakeX = (Math.random() - 0.5) * gVal * 28;
+    let shakeY = (Math.random() - 0.5) * gVal * 28;
+    let rotateDeg = (Math.random() - 0.5) * gVal * 18;
+    mesh.style.transform = `translate(${shakeX}px, ${shakeY}px) rotate(${rotateDeg}deg)`;
+    
+    if (gVal < 0.15) body.setAttribute('fill', '#3dd6ac');      
+    else if (gVal < 0.40) body.setAttribute('fill', '#f7a26a'); 
+    else body.setAttribute('fill', '#f74a6a');                  
+  } else {
+    mesh.style.transform = 'translate(0px, 0px) rotate(0deg)';
+    body.setAttribute('fill', selectedModelType === 'sedan' ? '#3b82f6' : '#ef4444');
+  }
+}
+
+function drawWaveGraphFrame(latestG) {
+  const canvas = document.getElementById('wave-canvas');
+  if(!canvas || !canvas.parentElement || canvas.offsetWidth === 0) return; // KRİTİK GÜVENLİK BARİYERİ
+  
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.parentElement.clientWidth; 
+  canvas.height = canvas.parentElement.clientHeight;
+  ctx.clearRect(0,0,canvas.width, canvas.height);
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.03)'; ctx.lineWidth = 1;
+  for(let i=1; i<4; i++) {
+    let y = (canvas.height / 4) * i;
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+  }
+
+  ctx.beginPath();
+  let step = canvas.width / (waveDataHistory.length - 1);
+  for(let i=0; i<waveDataHistory.length; i++) {
+    let val = waveDataHistory[i]; let x = i * step;
+    let y = canvas.height - (Math.min(val, 1.5) / 1.5) * (canvas.height - 20) - 10;
+    if(i===0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  
+  if(latestG < 0.15) ctx.strokeStyle = '#3dd6ac';
+  else if(latestG < 0.40) ctx.strokeStyle = '#f7a26a';
+  else ctx.strokeStyle = '#f74a6a';
+  
+  ctx.lineWidth = 2.5; ctx.lineJoin = 'round'; ctx.stroke();
+}
+
+function formatTime(ms) {
+  let totalSecs = Math.floor(ms / 1000);
+  let hrs = Math.floor(totalSecs / 3600);
+  let mins = Math.floor((totalSecs % 3600) / 60);
+  let secs = total
