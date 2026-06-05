@@ -7,102 +7,112 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 <style>
   body { background:#0a0a0f; color:#f0eeff; font-family:system-ui; margin:0; }
-  .app { max-width:600px; margin:auto; padding:20px; }
+  .app { max-width:700px; margin:auto; padding:20px; }
   .header { text-align:center; margin-bottom:20px; }
   .title { font-size:28px; font-weight:800; color:#7c6af7; }
   .card { background:#12121a; border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:16px; margin-bottom:16px; }
-  .option-box { background:#1a1a26; border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:10px; cursor:pointer; text-align:center; }
-  .option-box.selected { border-color:#7c6af7; background:rgba(124,106,247,0.1); }
   .ride-btn { padding:12px; border:none; border-radius:8px; font-weight:600; cursor:pointer; margin-top:10px; width:100%; }
   .btn-start { background:#3dd6ac; color:#000; }
   .btn-stop { background:#f74a6a; color:#fff; }
   .btn-play { background:#7c6af7; color:#fff; }
   #map { height:250px; border-radius:8px; margin-top:12px; }
-  .notice { font-size:12px; color:#3dd6ac; margin-top:8px; }
+  canvas { background:#1a1a26; border-radius:8px; width:100%; height:150px; margin-top:12px; }
+  .metrics { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px; }
+  .metric { background:#1a1a26; padding:10px; border-radius:8px; text-align:center; }
+  .metric h4 { margin:0; font-size:12px; color:#7c6af7; }
+  .metric p { margin:4px 0 0; font-size:16px; font-weight:700; }
 </style>
 </head>
 <body>
 <div class="app">
   <div class="header">
     <div class="title">Bumpy Ride</div>
-    <p>Sürüş Analitiği ve GPS Takibi</p>
+    <p>Sürüş Analitiği ve Konfor Takibi</p>
   </div>
 
   <div class="card">
-    <h3>1. Grafik Tipi</h3>
-    <div style="display:flex; gap:10px;">
-      <div class="option-box selected" id="opt-mesh" onclick="selectGraph('mesh')">🚗 Araç Animasyonu</div>
-      <div class="option-box" id="opt-wave" onclick="selectGraph('wave')">📈 Dalga Grafiği</div>
-    </div>
-  </div>
-
-  <div class="card">
-    <h3>2. Araç Tipi</h3>
-    <div style="display:flex; gap:10px;">
-      <div class="option-box selected" id="opt-sedan" onclick="selectVehicle('sedan')">🚙 Sedan</div>
-      <div class="option-box" id="opt-suv" onclick="selectVehicle('suv')">🚘 SUV</div>
-    </div>
-  </div>
-
-  <div class="card">
-    <h3>GPS & Harita</h3>
     <button class="ride-btn btn-start" onclick="startRide()">Başlat</button>
     <button class="ride-btn btn-stop" onclick="stopRide()">Durdur</button>
-    <button class="ride-btn btn-play" onclick="playback()">Oynat</button>
+    <button class="ride-btn btn-play" onclick="replayRide()">Replay</button>
     <div id="map"></div>
-    <div class="notice" id="gps-status">📍 GPS durumu: bekleniyor...</div>
+    <canvas id="shakeGraph"></canvas>
+    <div class="metrics">
+      <div class="metric"><h4>Anlık Hız</h4><p id="speed">0 km/h</p></div>
+      <div class="metric"><h4>Ortalama Hız</h4><p id="avgSpeed">0 km/h</p></div>
+      <div class="metric"><h4>Sürüş Süresi</h4><p id="rideTime">0 sn</p></div>
+      <div class="metric"><h4>Konfor</h4><p id="comfort">100%</p></div>
+    </div>
   </div>
 </div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script>
-let selectedGraph = "mesh";
-let selectedVehicle = "sedan";
-let map, marker, watchId;
+let map, marker, watchId, startTime, speedData=[], shakeData=[];
+let ctx=document.getElementById("shakeGraph").getContext("2d");
 
-function selectGraph(type){
-  selectedGraph = type;
-  document.querySelectorAll('[id^="opt-"]').forEach(el=>el.classList.remove("selected"));
-  document.getElementById("opt-"+type).classList.add("selected");
-}
-
-function selectVehicle(type){
-  selectedVehicle = type;
-  document.querySelectorAll('[id^="opt-"]').forEach(el=>el.classList.remove("selected"));
-  document.getElementById("opt-"+type).classList.add("selected");
-}
-
-function initMap(lat=39.9334, lng=32.8597){ // Ankara default
-  map = L.map('map').setView([lat,lng], 13);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution:'© OpenStreetMap'
-  }).addTo(map);
-  marker = L.marker([lat,lng]).addTo(map).bindPopup("Başlangıç Noktası").openPopup();
+function initMap(lat=39.9334,lng=32.8597){
+  map=L.map('map').setView([lat,lng],13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(map);
+  marker=L.marker([lat,lng]).addTo(map).bindPopup("Başlangıç").openPopup();
 }
 
 function startRide(){
-  if(!map){ initMap(); }
+  if(!map){initMap();}
+  startTime=Date.now();
+  speedData=[]; shakeData=[];
   if(navigator.geolocation){
-    watchId = navigator.geolocation.watchPosition(pos=>{
-      const {latitude, longitude} = pos.coords;
-      marker.setLatLng([latitude,longitude]).bindPopup("Anlık Konum").openPopup();
-      map.setView([latitude,longitude], 15);
-      document.getElementById("gps-status").textContent = "📍 GPS aktif: "+latitude.toFixed(4)+", "+longitude.toFixed(4);
-    }, err=>{
-      document.getElementById("gps-status").textContent = "❌ GPS hatası: "+err.message;
-    });
-  } else {
-    document.getElementById("gps-status").textContent = "❌ Tarayıcı GPS desteklemiyor.";
+    watchId=navigator.geolocation.watchPosition(pos=>{
+      const {latitude,longitude,speed}=pos.coords;
+      marker.setLatLng([latitude,longitude]);
+      map.setView([latitude,longitude],15);
+      let kmh=(speed?speed*3.6:0);
+      speedData.push(kmh);
+      document.getElementById("speed").textContent=kmh.toFixed(1)+" km/h";
+      let avg=speedData.reduce((a,b)=>a+b,0)/speedData.length;
+      document.getElementById("avgSpeed").textContent=avg.toFixed(1)+" km/h";
+      let elapsed=(Date.now()-startTime)/1000;
+      document.getElementById("rideTime").textContent=elapsed.toFixed(0)+" sn";
+      updateComfort();
+    },err=>{console.log("GPS Hatası",err);});
   }
+  window.addEventListener("devicemotion",motionHandler);
 }
 
 function stopRide(){
-  if(watchId){ navigator.geolocation.clearWatch(watchId); }
-  document.getElementById("gps-status").textContent = "⏹️ GPS durduruldu.";
+  if(watchId){navigator.geolocation.clearWatch(watchId);}
+  window.removeEventListener("devicemotion",motionHandler);
 }
 
-function playback(){
-  document.getElementById("gps-status").textContent = "▶️ Sürüş oynatımı (simülasyon) başlatıldı.";
+function replayRide(){
+  let i=0;
+  let replay=setInterval(()=>{
+    if(i>=shakeData.length){clearInterval(replay);return;}
+    drawGraph(shakeData[i]);
+    i++;
+  },200);
+}
+
+function motionHandler(e){
+  let acc=e.accelerationIncludingGravity;
+  let shake=Math.sqrt(acc.x*acc.x+acc.y*acc.y+acc.z*acc.z);
+  shakeData.push(shake);
+  drawGraph(shake);
+  updateComfort();
+}
+
+function drawGraph(val){
+  ctx.fillStyle="#1a1a26";
+  ctx.fillRect(0,0,ctx.canvas.width,ctx.canvas.height);
+  ctx.fillStyle="#3dd6ac";
+  ctx.fillRect(shakeData.length%ctx.canvas.width,ctx.canvas.height-val*2,2,2);
+}
+
+function updateComfort(){
+  if(shakeData.length>0){
+    let avgShake=shakeData.reduce((a,b)=>a+b,0)/shakeData.length;
+    let comfort=Math.max(0,100-avgShake*5);
+    document.getElementById("comfort").textContent=comfort.toFixed(0)+"%";
+  }
 }
 </script>
 </body>
