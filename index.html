@@ -154,7 +154,4 @@ function updateComfort(){
     let avgShake=shakeData.reduce((a,b)=>a+b,0)/shakeData.length;
     let excessShake = Math.max(0, avgShake - 9.8);
     let comfort = Math.max(0, 100 - excessShake*8); 
-    document.getElementById("comfort").textContent = comfort.toFixed(0)+"%";
-  }
-}
-</script
+    document.getElementById("comfort").text
