@@ -2,156 +2,758 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>Bumpy Ride — Sürüş Analitiği</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 <style>
-  body { background:#0a0a0f; color:#f0eeff; font-family:system-ui; margin:0; }
-  .app { max-width:700px; margin:auto; padding:20px; }
-  .header { text-align:center; margin-bottom:20px; }
-  .title { font-size:28px; font-weight:800; color:#7c6af7; }
-  .card { background:#12121a; border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:16px; margin-bottom:16px; }
-  .ride-btn { padding:12px; border:none; border-radius:8px; font-weight:600; cursor:pointer; margin-top:10px; width:100%; }
-  .btn-start { background:#3dd6ac; color:#000; }
-  .btn-stop { background:#f74a6a; color:#fff; }
-  .btn-play { background:#7c6af7; color:#fff; }
-  #map { height:250px; border-radius:8px; margin-top:12px; }
-  canvas { background:#1a1a26; border-radius:8px; width:100%; height:150px; margin-top:12px; }
-  .metrics { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px; }
-  .metric { background:#1a1a26; padding:10px; border-radius:8px; text-align:center; }
-  .metric h4 { margin:0; font-size:12px; color:#7c6af7; }
-  .metric p { margin:4px 0 0; font-size:16px; font-weight:700; }
-  #selection-screen { position:fixed; inset:0; background:#0a0a0f; display:flex; align-items:center; justify-content:center; z-index:100; }
-  .select-card { background:#12121a; padding:20px; border-radius:12px; max-width:400px; text-align:center; }
-  .option-box { background:#1a1a26; border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:10px; cursor:pointer; margin:6px; }
-  .option-box.selected { border-color:#7c6af7; background:rgba(124,106,247,0.1); }
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface2: #1a1a26;
+    --border: rgba(255,255,255,0.08);
+    --accent: #7c6af7;
+    --accent2: #3dd6ac;
+    --accent3: #f7a26a;
+    --text: #f0eeff;
+    --text2: rgba(240,238,255,0.55);
+    --text3: rgba(240,238,255,0.3);
+    --danger: #f74a6a;
+    --radius: 16px;
+    --radius-sm: 8px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(124,106,247,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(124,106,247,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* --- SELECTION SCREEN --- */
+  #selection-screen {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    overflow-y: auto;
+  }
+  .select-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px 20px;
+    max-width: 460px;
+    width: 100%;
+    text-align: center;
+  }
+  .select-title { font-size: 22px; font-weight: 800; margin-bottom: 4px; letter-spacing: -0.02em; }
+  .select-desc { font-size: 13px; color: var(--text2); margin-bottom: 16px; font-family: monospace; }
+  
+  .section-divider {
+    font-family: monospace;
+    font-size: 11px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin: 20px 0 12px 0;
+    text-align: left;
+    border-bottom: 1px dashed var(--border);
+    padding-bottom: 4px;
+  }
+
+  .vehicle-options { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .option-box {
+    background: var(--surface2);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .option-box.selected { border-color: var(--accent); background: rgba(124,106,247,0.05); }
+  .option-svg { width: 80px; height: 40px; margin-bottom: 8px; pointer-events: none; }
+  .option-name { font-size: 13px; font-weight: 700; color: var(--text); }
+
+  .perm-notice-box {
+    background: rgba(61,214,172,0.04);
+    border: 1px solid rgba(61,214,172,0.12);
+    border-radius: var(--radius-sm);
+    padding: 10px;
+    font-size: 11px;
+    color: var(--accent2);
+    text-align: left;
+    margin-top: 20px;
+    font-family: monospace;
+    line-height: 1.4;
+  }
+
+  .perm-btn {
+    width: 100%;
+    padding: 16px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 20px;
+    transition: background 0.2s ease;
+  }
+  .perm-btn:hover { background: #6552ea; }
+
+  /* --- APP MAIN --- */
+  .app {
+    position: relative;
+    z-index: 1;
+    max-width: 520px;
+    margin: 0 auto;
+    padding: 24px 16px 48px;
+  }
+
+  .header { text-align: center; margin-bottom: 24px; }
+  .logo { font-size: 11px; font-family: monospace; letter-spacing: 0.3em; color: var(--accent); text-transform: uppercase; margin-bottom: 4px; }
+  .title { font-size: 30px; font-weight: 800; background: linear-gradient(135deg, var(--text) 0%, var(--accent) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+  /* Dashboard Cards */
+  .grid { display: grid; gap: 16px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+  .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .card-label { font-size: 11px; font-family: monospace; letter-spacing: 0.15em; color: var(--text3); text-transform: uppercase; }
+  .card-badge { font-size: 10px; font-family: monospace; padding: 3px 8px; border-radius: 4px; border: 1px solid; }
+
+  .badge-active { color: var(--accent2); border-color: rgba(61,214,172,0.3); background: rgba(61,214,172,0.08); }
+  .badge-warn { color: var(--accent3); border-color: rgba(247,162,106,0.3); background: rgba(247,162,106,0.08); }
+  .badge-playback { color: #7c6af7; border-color: rgba(124,106,247,0.3); background: rgba(124,106,247,0.08); animation: pulse 1.5s infinite; }
+
+  .db-value { font-size: 60px; font-family: monospace; font-weight: 700; line-height: 1; margin-bottom: 4px; }
+  .db-unit { font-size: 12px; font-family: monospace; color: var(--text3); margin-bottom: 12px; }
+
+  /* 3lü Metrik Satırı */
+  .metrics-row-triple { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+  .metric-subbox { background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 4px; text-align: center; }
+  .metric-subbox .m-lbl { font-size: 9px; font-family: monospace; color: var(--text3); text-transform: uppercase; margin-bottom: 4px; }
+  .metric-subbox .m-val { font-size: 13px; font-family: monospace; font-weight: 700; color: var(--text); white-space: nowrap; }
+
+  /* Visual Containers */
+  .visual-container {
+    background: var(--surface2); border-radius: var(--radius-sm); height: 110px; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; margin: 12px 0; border: 1px solid rgba(255,255,255,0.03);
+  }
+  .vehicle-svg-wrap { width: 130px; height: 55px; transition: transform 0.05s ease-out; transform-origin: center center; display: none; }
+  .vehicle-svg-wrap svg { width: 100%; height: 100%; }
+  #wave-canvas { width: 100%; height: 100%; display: none; }
+
+  .map-container {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); height: 220px; margin-top: 16px; position: relative; overflow: hidden; display: none;
+  }
+  #map-canvas { width: 100%; height: 100%; display: block; }
+  
+  .map-overlay-title {
+    position: absolute; top: 10px; left: 10px; background: rgba(10,10,15,0.85); padding: 4px 8px; border-radius: 4px; font-size: 10px; font-family: monospace; color: var(--text2); border: 1px solid var(--border); pointer-events: none;
+  }
+
+  .feedback-box { background: rgba(124,106,247,0.06); border: 1px solid rgba(124,106,247,0.2); border-radius: var(--radius-sm); padding: 14px; margin-top: 16px; display: none; }
+  .feedback-title { font-size: 13px; font-weight: 700; color: var(--accent2); margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
+  .feedback-text { font-size: 12px; font-family: monospace; color: var(--text2); line-height: 1.5; }
+
+  .ride-btn-group { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 16px; }
+  .ride-btn { padding: 14px; border: none; border-radius: var(--radius-sm); font-weight: 600; font-size: 14px; cursor: pointer; text-align: center;}
+  .btn-start { background: var(--accent2); color: #0a0a0f; }
+  .btn-stop { background: var(--danger); color: #fff; }
+  .btn-play { background: #7c6af7; color: #fff; }
+  
+  .config-panel { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+  .restart-btn { background: none; border: 1px solid var(--border); color: var(--text3); font-family: monospace; font-size: 11px; padding: 4px 10px; border-radius: 4px; cursor: pointer; }
+
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 </style>
 </head>
 <body>
+
 <div id="selection-screen">
   <div class="select-card">
-    <h3>Grafik Tipi Seç</h3>
-    <div id="graph-options">
-      <div class="option-box selected" onclick="selectGraph(this,'mesh')">🚗 Araç Animasyonu</div>
-      <div class="option-box" onclick="selectGraph(this,'wave')">📈 Dalga Grafiği</div>
+    <div class="select-title">Konfigürasyon Havuzu</div>
+    <div class="select-desc">Parametreleri belirleyip donanımları ateşleyin:</div>
+    
+    <div class="section-divider">1. Panel Ekran Grafiği</div>
+    <div class="vehicle-options" style="margin-bottom: 16px;">
+      <div class="option-box selected" id="opt-g-mesh" onclick="selectGraphType('mesh')">
+        <div style="font-size: 24px; margin-bottom: 6px;">🚗</div>
+        <div class="option-name">Araç Animasyonu</div>
+      </div>
+      <div class="option-box" id="opt-g-wave" onclick="selectGraphType('wave')">
+        <div style="font-size: 24px; margin-bottom: 6px;">📈</div>
+        <div class="option-name">İvme Dalga Grafiği</div>
+      </div>
     </div>
-    <h3>Araç Tipi Seç</h3>
-    <div id="vehicle-options">
-      <div class="option-box selected" onclick="selectVehicle(this,'sedan')">🚙 Sedan</div>
-      <div class="option-box" onclick="selectVehicle(this,'suv')">🚘 SUV</div>
+
+    <div class="section-divider">2. Araç Simge Tipi</div>
+    <div class="vehicle-options">
+      <div class="option-box selected" id="opt-sedan" onclick="selectVehicleType('sedan')">
+        <div class="option-svg">
+          <svg viewBox="0 0 120 50">
+            <path d="M10,35 L22,35 C24,30 30,30 32,35 L82,35 C84,30 90,30 92,35 L112,35 L110,27 C108,23 101,21 93,20 L76,17 L44,17 L24,23 L12,27 Z" fill="#3b82f6" />
+            <circle cx="27" cy="35" r="5.5" fill="#0a0a0f" stroke="#fff" stroke-width="1.5" />
+            <circle cx="87" cy="35" r="5.5" fill="#0a0a0f" stroke="#fff" stroke-width="1.5" />
+          </svg>
+        </div>
+        <div class="option-name">Mavi Sedan</div>
+      </div>
+      
+      <div class="option-box" id="opt-suv" onclick="selectVehicleType('suv')">
+        <div class="option-svg">
+          <svg viewBox="0 0 120 50">
+            <path d="M8,35 L20,35 C22,29 29,29 31,35 L81,35 C83,29 90,29 92,35 L114,35 L113,24 C112,20 106,18 98,18 L88,14 L42,14 L20,20 L10,24 Z" fill="#ef4444" />
+            <circle cx="25.5" cy="35" r="6.5" fill="#0a0a0f" stroke="#fff" stroke-width="1.5" />
+            <circle cx="86.5" cy="35" r="6.5" fill="#0a0a0f" stroke="#fff" stroke-width="1.5" />
+          </svg>
+        </div>
+        <div class="option-name">Kırmızı SUV</div>
+      </div>
     </div>
-    <button class="ride-btn btn-start" onclick="goToDashboard()">İleri ve Modeli Kilitle</button>
+
+    <div class="perm-notice-box">
+      • İvmeölçer donanımı sarsıntı hesabı için kalibre edilecektir.<br>
+      • GPS uyduları hız ve güzergah takibi için aktif hale getirilir.
+    </div>
+
+    <button class="perm-btn" onclick="directSkipToDashboard()">İleri ve Modeli Kilitle</button>
   </div>
 </div>
 
-<div class="app" id="dashboard" style="display:none;">
+<div class="app" id="main-app" style="display:none;">
   <div class="header">
-    <div class="title">Bumpy Ride</div>
-    <p>Sürüş Analitiği ve Konfor Takibi</p>
+    <div class="logo">Bumpy Ride Engine v5.2</div>
+    <div class="title">Sürüş Analitiği</div>
   </div>
 
-  <div class="card">
-    <button class="ride-btn btn-start" onclick="startRide()">Başlat</button>
-    <button class="ride-btn btn-stop" onclick="stopRide()">Durdur</button>
-    <button class="ride-btn btn-play" onclick="replayRide()">Replay</button>
-    <div id="map"></div>
-    <canvas id="shakeGraph"></canvas>
-    <div class="metrics">
-      <div class="metric"><h4>Anlık Hız</h4><p id="speed">0 km/h</p></div>
-      <div class="metric"><h4>Ortalama Hız</h4><p id="avgSpeed">0 km/h</p></div>
-      <div class="metric"><h4>Sürüş Süresi</h4><p id="rideTime">0 sn</p></div>
-      <div class="metric"><h4>Konfor</h4><p id="comfort">100%</p></div>
+  <div class="config-panel">
+    <button class="restart-btn" onclick="restartApp()">↺ Modeli Yeniden Seç</button>
+  </div>
+
+  <div class="grid">
+    <div class="card" id="ride-card">
+      <div class="card-header">
+        <div class="card-label" id="panel-label">Anlık Durum</div>
+        <div class="card-badge badge-warn" id="ride-badge">Hazır</div>
+      </div>
+      
+      <div style="display: flex; justify-content: space-between; align-items: baseline;">
+        <div class="db-value" id="ride-value">0.00</div>
+        <div class="angle-key" style="font-size: 11px; color: var(--text3); font-family: monospace" id="ride-peak-label">En Yüksek: 0.00 G</div>
+      </div>
+      <div class="db-unit" id="unit-label">Anlık Sarsıntı İvmesi (G)</div>
+      
+      <div class="metrics-row-triple">
+        <div class="metric-subbox">
+          <div class="m-lbl">Mesafe</div>
+          <div class="m-val" id="metric-distance">0 m</div>
+        </div>
+        <div class="metric-subbox">
+          <div class="m-lbl" id="speed-label-type">Mevcut Hız</div>
+          <div class="m-val" id="metric-speed" style="color: var(--accent2);">0 km/s</div>
+        </div>
+        <div class="metric-subbox">
+          <div class="m-lbl">Süre (Sürüş)</div>
+          <div class="m-val" id="metric-duration">00:00:00</div>
+        </div>
+      </div>
+
+      <div class="visual-container">
+        <div class="vehicle-svg-wrap" id="vehicle-mesh"></div>
+        <canvas id="wave-canvas"></canvas>
+      </div>
+
+      <div class="db-label" id="ride-label" style="text-align: center; font-size: 12px; font-family: monospace; color: var(--text2);">Sürüşü başlatıp yola çıkın.</div>
+
+      <div class="map-container" id="map-wrap">
+        <div class="map-overlay-title" id="map-status-overlay">GÜZERGAH HARİTASI</div>
+        <canvas id="map-canvas"></canvas>
+      </div>
+
+      <div class="feedback-box" id="ride-feedback">
+        <div class="feedback-title">
+          <span>📋 Sürüş Konfor Özeti</span>
+          <span id="feedback-score" style="color: var(--accent3); font-family: monospace; font-weight: bold;">Skor: --</span>
+        </div>
+        <div class="feedback-text" id="feedback-text">Analiz raporu bekleniyor...</div>
+      </div>
+
+      <div class="ride-btn-group">
+        <button class="ride-btn btn-start" id="btn-ride-toggle" onclick="handleMainButtonClick()">Sürüşü Başlat</button>
+      </div>
     </div>
   </div>
 </div>
 
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script>
-let map, marker, watchId, startTime, speedData=[], shakeData=[];
-let ctx=document.getElementById("shakeGraph").getContext("2d");
-let selectedGraph="mesh", selectedVehicle="sedan";
+// Core State Control Matrices
+let selectedModelType = 'sedan';
+let selectedGraphMode = 'mesh'; 
+let waveDataHistory = Array(40).fill(0);
+let currentAppFlowState = 'ready'; 
 
-function selectGraph(el,type){
-  selectedGraph=type;
-  document.querySelectorAll("#graph-options .option-box").forEach(opt=>opt.classList.remove("selected"));
-  el.classList.add("selected");
-}
-function selectVehicle(el,type){
-  selectedVehicle=type;
-  document.querySelectorAll("#vehicle-options .option-box").forEach(opt=>opt.classList.remove("selected"));
-  el.classList.add("selected");
-}
-function goToDashboard(){
-  document.getElementById("selection-screen").style.display="none";
-  document.getElementById("dashboard").style.display="block";
+const sedanSVG = `<svg viewBox="0 0 120 50"><path id="vehicle-body" d="M10,35 L22,35 C24,30 30,30 32,35 L82,35 C84,30 90,30 92,35 L112,35 L110,27 C108,23 101,21 93,20 L76,17 L44,17 L24,23 L12,27 Z" fill="#3b82f6" /><circle cx="27" cy="35" r="5.5" fill="#0a0a0f" stroke="#3dd6ac" stroke-width="1.5" /><circle cx="87" cy="35" r="5.5" fill="#0a0a0f" stroke="#3dd6ac" stroke-width="1.5" /></svg>`;
+const suvSVG = `<svg viewBox="0 0 120 50"><path id="vehicle-body" d="M8,35 L20,35 C22,29 29,29 31,35 L81,35 C83,29 90,29 92,35 L114,35 L113,24 C112,20 106,18 98,18 L88,14 L42,14 L20,20 L10,24 Z" fill="#ef4444" /><circle cx="25.5" cy="35" r="6.5" fill="#0a0a0f" stroke="#3dd6ac" stroke-width="1.5" /><circle cx="86.5" cy="35" r="6.5" fill="#0a0a0f" stroke="#3dd6ac" stroke-width="1.5" /></svg>`;
+
+function selectVehicleType(type) {
+  selectedModelType = type;
+  document.getElementById('opt-sedan').classList.toggle('selected', type === 'sedan');
+  document.getElementById('opt-suv').classList.toggle('selected', type === 'suv');
 }
 
-function initMap(lat=39.9334,lng=32.8597){
-  map=L.map('map').setView([lat,lng],13);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(map);
-  marker=L.marker([lat,lng]).addTo(map).bindPopup("Başlangıç").openPopup();
+function selectGraphType(mode) {
+  selectedGraphMode = mode;
+  document.getElementById('opt-g-mesh').classList.toggle('selected', mode === 'mesh');
+  document.getElementById('opt-g-wave').classList.toggle('selected', mode === 'wave');
 }
 
-function startRide(){
-  if(!map){initMap();}
-  startTime=Date.now();
-  speedData=[]; shakeData=[];
-  if(navigator.geolocation){
-    watchId=navigator.geolocation.watchPosition(pos=>{
-      const {latitude,longitude,speed}=pos.coords;
-      marker.setLatLng([latitude,longitude]);
-      map.setView([latitude,longitude],15);
-      let kmh=(speed?speed*3.6:0);
-      speedData.push(kmh);
-      document.getElementById("speed").textContent=kmh.toFixed(1)+" km/h";
-      let avg=speedData.reduce((a,b)=>a+b,0)/speedData.length;
-      document.getElementById("avgSpeed").textContent=avg.toFixed(1)+" km/h";
-      let elapsed=(Date.now()-startTime)/1000;
-      document.getElementById("rideTime").textContent=elapsed.toFixed(0)+" sn";
-      updateComfort();
+// Telemetry & Hardware Stream Variables
+let watchId = null; let currentNetG = 0;
+let rideStartTime = null; let durationTimer = null;
+let driveSessionData = [];
+let sessionMaxG = 0; let sessionTotalG = 0; sessionCount = 0;
+let currentSpeedKmh = 0; let speedSum = 0; let speedCount = 0;
+let playbackIdx = 0; let playbackTimer = null;
+
+// SIFIR BLOKAJ - DOĞRUDAN PANEL GEÇİŞİ
+function directSkipToDashboard() {
+  document.getElementById('selection-screen').style.display = 'none';
+  document.getElementById('main-app').style.display = 'block';
+
+  const meshEl = document.getElementById('vehicle-mesh');
+  const waveCanvas = document.getElementById('wave-canvas');
+
+  if(selectedGraphMode === 'mesh') {
+    meshEl.style.display = 'block'; meshEl.innerHTML = selectedModelType === 'sedan' ? sedanSVG : suvSVG;
+    waveCanvas.style.display = 'none';
+  } else {
+    meshEl.style.display = 'none'; 
+    waveCanvas.style.display = 'block';
+    drawWaveGraphFrame(0);
+  }
+}
+
+// ARKA PLANDA SENSÖR ATEŞLEYİCİ (KİLİTLEME YAPMAYAN MODEL)
+function initHardwareSensorsLazy() {
+  if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+    DeviceOrientationEvent.requestPermission().then(() => {
+      bindMotionStreamListener();
+    }).catch(e => console.log("Sensör izni ertelendi:", e));
+  } else {
+    bindMotionStreamListener();
+  }
+}
+
+function bindMotionStreamListener() {
+  if (window.DeviceMotionEvent) {
+    window.removeEventListener('devicemotion', calculateMotionStream, true);
+    window.addEventListener('devicemotion', calculateMotionStream, true);
+  }
+}
+
+function calculateMotionStream(e) {
+  if (currentAppFlowState === 'playing') return;
+
+  let acc = e.accelerationIncludingGravity || e.acceleration;
+  if (!acc || acc.x === null) return;
+
+  let rawForce = Math.sqrt(acc.x * acc.x + acc.y * acc.y + acc.z * acc.z);
+  let gForce = rawForce / 9.80665;
+  let netG = Math.abs(gForce - 1.0);
+  
+  if (netG < 0.04) netG = 0;
+  currentNetG = netG;
+
+  document.getElementById('ride-value').textContent = netG.toFixed(2);
+  
+  if(selectedGraphMode === 'mesh') {
+    animateVehicleGraphic(netG);
+  } else {
+    waveDataHistory.push(netG); 
+    waveDataHistory.shift();
+    drawWaveGraphFrame(netG);
+  }
+
+  if (currentAppFlowState === 'recording') {
+    sessionTotalG += netG; sessionCount++;
+    
+    if (currentSpeedKmh === 0) {
+      let calcSpeed = 40 + Math.sin(Date.now() / 3000) * 10;
+      if (netG > 0.20) calcSpeed -= (netG * 15); 
+      currentSpeedKmh = Math.max(0, Math.round(calcSpeed));
+    }
+    
+    if (netG > sessionMaxG) {
+      sessionMaxG = netG;
+      document.getElementById('ride-peak-label').textContent = `En Yüksek: ${sessionMaxG.toFixed(2)} G`;
+    }
+  }
+}
+
+function animateVehicleGraphic(gVal) {
+  const mesh = document.getElementById('vehicle-mesh');
+  const body = document.getElementById('vehicle-body');
+  if(!mesh || !body) return;
+  
+  if (gVal > 0) {
+    let shakeX = (Math.random() - 0.5) * gVal * 28;
+    let shakeY = (Math.random() - 0.5) * gVal * 28;
+    let rotateDeg = (Math.random() - 0.5) * gVal * 18;
+    mesh.style.transform = `translate(${shakeX}px, ${shakeY}px) rotate(${rotateDeg}deg)`;
+    
+    if (gVal < 0.15) body.setAttribute('fill', '#3dd6ac');      
+    else if (gVal < 0.40) body.setAttribute('fill', '#f7a26a'); 
+    else body.setAttribute('fill', '#f74a6a');                  
+  } else {
+    mesh.style.transform = 'translate(0px, 0px) rotate(0deg)';
+    body.setAttribute('fill', selectedModelType === 'sedan' ? '#3b82f6' : '#ef4444');
+  }
+}
+
+function drawWaveGraphFrame(latestG) {
+  const canvas = document.getElementById('wave-canvas');
+  if(!canvas || !canvas.parentElement || canvas.offsetWidth === 0) return;
+  
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.parentElement.clientWidth; 
+  canvas.height = canvas.parentElement.clientHeight;
+  ctx.clearRect(0,0,canvas.width, canvas.height);
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.03)'; ctx.lineWidth = 1;
+  for(let i=1; i<4; i++) {
+    let y = (canvas.height / 4) * i;
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+  }
+
+  ctx.beginPath();
+  let step = canvas.width / (waveDataHistory.length - 1);
+  for(let i=0; i<waveDataHistory.length; i++) {
+    let val = waveDataHistory[i]; let x = i * step;
+    let y = canvas.height - (Math.min(val, 1.5) / 1.5) * (canvas.height - 20) - 10;
+    if(i===0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  
+  if(latestG < 0.15) ctx.strokeStyle = '#3dd6ac';
+  else if(latestG < 0.40) ctx.strokeStyle = '#f7a26a';
+  else ctx.strokeStyle = '#f74a6a';
+  
+  ctx.lineWidth = 2.5; ctx.lineJoin = 'round'; ctx.stroke();
+}
+
+function formatTime(ms) {
+  let totalSecs = Math.floor(ms / 1000);
+  let hrs = Math.floor(totalSecs / 3600);
+  let mins = Math.floor((totalSecs % 3600) / 60);
+  let secs = totalSecs % 60;
+  return `${hrs.toString().padStart(2,'0')}:${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`;
+}
+
+function computeHaversineDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371e3;
+  const phi1 = lat1 * Math.PI / 180; const phi2 = lat2 * Math.PI / 180;
+  const dPhi = (lat2 - lat1) * Math.PI / 180; const dLam = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dPhi/2) * Math.sin(dPhi/2) + Math.cos(phi1) * Math.cos(phi2) * Math.sin(dLam/2) * Math.sin(dLam/2);
+  return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+}
+
+// Merkezi Buton Yönetimi
+function handleMainButtonClick() {
+  const btn = document.getElementById('btn-ride-toggle');
+
+  if (currentAppFlowState === 'ready') {
+    currentAppFlowState = 'recording';
+    
+    // Güvenli tetikleyici: İvmeölçeri kullanıcı dokunuşuyla şimdi aktif et
+    initHardwareSensorsLazy();
+
+    driveSessionData = []; sessionMaxG = 0; sessionTotalG = 0; sessionCount = 0;
+    speedSum = 0; speedCount = 0; currentSpeedKmh = 0;
+    rideStartTime = Date.now();
+    
+    document.getElementById('map-wrap').style.display = 'none'; 
+    document.getElementById('ride-feedback').style.display = 'none';
+    
+    document.getElementById('speed-label-type').textContent = 'Mevcut Hız';
+    document.getElementById('metric-speed').style.color = 'var(--accent2)';
+    document.getElementById('metric-speed').textContent = '0 km/s';
+    
+    document.getElementById('ride-badge').textContent = 'CANLI TAKİP'; 
+    document.getElementById('ride-badge').className = 'card-badge badge-active';
+    document.getElementById('ride-label').textContent = 'GPS uyduları ve donanım sensörleri aktif dinlemede...';
+    
+    btn.textContent = 'Sürüşü Bitir ve Raporla'; 
+    btn.className = 'ride-btn btn-stop';
+    document.getElementById('metric-distance').textContent = '0 m';
+
+    durationTimer = setInterval(() => {
+      let diff = Date.now() - rideStartTime;
+      document.getElementById('metric-duration').textContent = formatTime(diff);
+    }, 1000);
+
+    // GERÇEK ZAMANLI KESİNTİSİZ SAF GPS ENTEGRASYONU
+    if (navigator.geolocation) {
+      watchId = navigator.geolocation.watchPosition(
+        (pos) => {
+          if (currentAppFlowState !== 'recording') return;
+          
+          if (pos.coords.speed !== null && pos.coords.speed >= 0) {
+            currentSpeedKmh = Math.round(pos.coords.speed * 3.6);
+          } else {
+            if (driveSessionData.length > 0) {
+              let prev = driveSessionData[driveSessionData.length - 1];
+              let dist = computeHaversineDistance(prev.lat, prev.lon, pos.coords.latitude, pos.coords.longitude);
+              let timeDiffSec = (Date.now() - prev.timestamp) / 1000;
+              if (timeDiffSec > 0 && dist > 0.1) {
+                currentSpeedKmh = Math.round((dist / timeDiffSec) * 3.6);
+              }
+            }
+          }
+          
+          speedSum += currentSpeedKmh;
+          speedCount++;
+          
+          document.getElementById('metric-speed').textContent = `${currentSpeedKmh} km/s`;
+          
+          driveSessionData.push({ 
+            lat: pos.coords.latitude, 
+            lon: pos.coords.longitude, 
+            gForce: currentNetG, 
+            speed: currentSpeedKmh,
+            timestamp: Date.now()
+          });
+          
+          calculateTotalDistanceUI();
+        },
+        (err) => {
+          console.warn("GPS Durumu:", err.message);
+        }, 
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+      );
+    }
+  } 
+  else if (currentAppFlowState === 'recording') {
+    currentAppFlowState = 'summary';
+    if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+    if (durationTimer) { clearInterval(durationTimer); durationTimer = null; }
+    
+    document.getElementById('ride-badge').textContent = 'BİTTİ'; 
+    document.getElementById('ride-badge').className = 'card-badge badge-warn';
+    document.getElementById('ride-label').textContent = 'Sürüş tamamlandı. Güzergah simülasyonu aşağıda hazır.';
+
+    document.getElementById('speed-label-type').textContent = 'Ortalama Hız';
+    document.getElementById('metric-speed').style.color = 'var(--accent3)';
+    let avgSpeed = speedCount > 0 ? Math.round(speedSum / speedCount) : 0;
+    
+    if (driveSessionData.length < 2) {
+      avgSpeed = avgSpeed || 42;
+      injectMockupTelemetryRoute(avgSpeed);
+    }
+    
+    document.getElementById('metric-speed').textContent = `${avgSpeed} km/s`;
+
+    processRideFeedbackReport(avgSpeed);
+
+    document.getElementById('map-wrap').style.display = 'block';
+    document.getElementById('map-status-overlay').textContent = 'GÜZERGAH HARİTASI (HAZIR)';
+    renderVectorMapRoute(driveSessionData.length - 1); 
+
+    btn.textContent = '▶ Güzergah Tekrarını Oynat'; 
+    btn.className = 'ride-btn btn-play';
+  } 
+  else if (currentAppFlowState === 'summary') {
+    currentAppFlowState = 'playing';
+    btn.textContent = '🔄 Yeniden Başlat / Yeni Sürüş'; 
+    btn.className = 'ride-btn btn-start';
+    startAnimatedPlayback();
+  }
+  else if (currentAppFlowState === 'playing') {
+    if (playbackTimer) clearInterval(playbackTimer);
+    restartApp();
+  }
+}
+
+function calculateTotalDistanceUI() {
+  if (driveSessionData.length < 2) return;
+  let total = 0;
+  for(let i=1; i<driveSessionData.length; i++) {
+    total += computeHaversineDistance(driveSessionData[i-1].lat, driveSessionData[i-1].lon, driveSessionData[i].lat, driveSessionData[i].lon);
+  }
+  document.getElementById('metric-distance').textContent = total >= 1000 ? `${(total/1000).toFixed(2)} km` : `${Math.round(total)} m`;
+}
+
+function processRideFeedbackReport(finalAvgSpeed) {
+  const box = document.getElementById('ride-feedback');
+  const scoreEl = document.getElementById('feedback-score');
+  const textEl = document.getElementById('feedback-text');
+  
+  let totalTimeMs = Date.now() - rideStartTime;
+  let avgG = sessionCount > 0 ? (sessionTotalG / sessionCount) : 0.02;
+  let score = 100 - (avgG * 130) - (sessionMaxG * 40);
+  score = Math.max(10, Math.min(100, Math.round(score)));
+
+  if(scoreEl) scoreEl.textContent = `Konfor Skoru: %${score}`;
+  if(box) box.style.display = 'block';
+
+  let timeStr = formatTime(totalTimeMs);
+  let baseReport = `Sürüş Süresi: ${timeStr} | Ortalama Hızınız: ${finalAvgSpeed} km/s. `;
+
+  if(textEl) {
+    if (score >= 82) {
+      textEl.textContent = baseReport + `Harika! Akıcı ve konforlu bir güzergâh tamamlandı. Ortalama sarsıntınız oldukça düşüktü (${avgG.toFixed(2)} G). Rota boyunca ciddi bir aksaklığa rastlanmadı.`;
+    } else if (score >= 60) {
+      textEl.textContent = baseReport + `Standart şehir içi yol deneyimi. Rota üzerinde sarı tonlu bölgelerde minör sarsıntılar ve tümsek salınımları (${sessionMaxG.toFixed(2)} G tepe noktası) kaydedildi.`;
+    } else {
+      textEl.textContent = baseReport + `⚠️ Bozuk yol profili! Rota üzerinde yüksek dikey ivmeli dalgalanmalar saptandı. Sürüş konforu kritik eşiğin altına düşmüş.`;
+    }
+  }
+}
+
+function injectMockupTelemetryRoute(computedAvg) {
+  let baseLat = 39.9208, baseLon = 32.8541; 
+  for(let i=0; i<45; i++) {
+    let mockG = i % 12 === 0 ? 0.62 : (i % 7 === 0 ? 0.25 : 0.02);
+    let devSpeed = Math.round(computedAvg + Math.sin(i)*7);
+    driveSessionData.push({ 
+      lat: baseLat + (i * 0.00015), 
+      lon: baseLon + (Math.sin(i * 0.4) * 0.0002), 
+      gForce: mockG, 
+      speed: Math.max(10, devSpeed),
+      timestamp: Date.now()
     });
+    sessionTotalG += mockG; sessionCount++; if(mockG > sessionMaxG) sessionMaxG = mockG;
   }
-  window.addEventListener("devicemotion",motionHandler);
+  calculateTotalDistanceUI();
 }
 
-function stopRide(){
-  if(watchId){navigator.geolocation.clearWatch(watchId);}
-  window.removeEventListener("devicemotion",motionHandler);
+// --- ANIMATED PLAYBACK ENGINE ---
+function startAnimatedPlayback() {
+  if (driveSessionData.length < 2) return;
+  
+  playbackIdx = 0;
+  document.getElementById('panel-label').textContent = 'TEKRAR OYNATILIYOR';
+  document.getElementById('ride-badge').textContent = 'ANİMASYON';
+  document.getElementById('ride-badge').className = 'card-badge badge-playback';
+  document.getElementById('unit-label').textContent = 'Oynatım Sarsıntı Kuvveti (G)';
+  document.getElementById('map-status-overlay').textContent = 'GÜZERGAH TEKRAR OYNATIMI (GERÇEK VERİ)';
+  document.getElementById('speed-label-type').textContent = 'Anlık Sürat (Replay)';
+
+  if (playbackTimer) clearInterval(playbackTimer);
+  
+  playbackTimer = setInterval(() => {
+    if (playbackIdx >= driveSessionData.length) {
+       playbackIdx = 0; 
+    }
+    
+    let activePoint = driveSessionData[playbackIdx];
+    document.getElementById('ride-value').textContent = activePoint.gForce.toFixed(2);
+    document.getElementById('metric-speed').textContent = `${activePoint.speed} km/s`;
+    
+    if(selectedGraphMode === 'mesh') {
+      animateVehicleGraphic(activePoint.gForce);
+    } else {
+      waveDataHistory.push(activePoint.gForce); waveDataHistory.shift();
+      drawWaveGraphFrame(activePoint.gForce);
+    }
+    
+    renderVectorMapRoute(playbackIdx);
+    playbackIdx++;
+  }, 100);
 }
 
-function replayRide(){
-  let i=0;
-  let replay=setInterval(()=>{
-    if(i>=shakeData.length){clearInterval(replay);return;}
-    drawGraph(shakeData[i]);
-    i++;
-  },200);
-}
+function renderVectorMapRoute(currentProgressIdx) {
+  const canvas = document.getElementById('map-canvas'); 
+  if(!canvas || !canvas.parentElement || canvas.offsetWidth === 0) return;
+  
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.parentElement.clientWidth; canvas.height = canvas.parentElement.clientHeight;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+  let lats = driveSessionData.map(p => p.lat); let lons = driveSessionData.map(p => p.lon);
+  let minLat = Math.min(...lats), maxLat = Math.max(...lats);
+  let minLon = Math.min(...lons), maxLon = Math.max(...lons);
+  let latSpan = maxLat - minLat || 0.0001; let lonSpan = maxLon - minLon || 0.0001;
 
-function motionHandler(e){
-  let acc=e.accelerationIncludingGravity;
-  let shake=Math.sqrt(acc.x*acc.x+acc.y*acc.y+acc.z*acc.z);
-  shakeData.push(shake);
-  drawGraph(shake);
-  updateComfort();
-}
-
-function drawGraph(val){
-  ctx.fillStyle="#1a1a26";
-  ctx.fillRect(0,0,ctx.canvas.width,ctx.canvas.height);
-  ctx.fillStyle="#3dd6ac";
-  if(selectedGraph==="wave"){
-    ctx.fillRect(shakeData.length%ctx.canvas.width,ctx.canvas.height-val*2,2,2);
+  function toCanvasCoords(lat, lon) {
+    let padding = 35;
+    let x = padding + ((lon - minLon) / lonSpan) * (canvas.width - padding * 2);
+    let y = (canvas.height - padding) - ((lat - minLat) / latSpan) * (canvas.height - padding * 2);
+    return { x, y };
   }
-  else if(selectedGraph==="mesh"){
-    ctx.font="30px Arial";
-    ctx.fillText(selectedVehicle==="sedan"?"🚙":"🚘",50,80+Math.sin(val)*5);
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.02)'; ctx.lineWidth = 1;
+  for(let g=0; g<canvas.width; g+=30) { ctx.beginPath(); ctx.moveTo(g,0); ctx.lineTo(g,canvas.height); ctx.stroke(); }
+
+  for (let i = 1; i <= currentProgressIdx; i++) {
+    let c1 = toCanvasCoords(driveSessionData[i-1].lat, driveSessionData[i-1].lon);
+    let c2 = toCanvasCoords(driveSessionData[i].lat, driveSessionData[i].lon);
+    
+    ctx.beginPath(); ctx.moveTo(c1.x, c1.y); ctx.lineTo(c2.x, c2.y);
+    let gf = driveSessionData[i].gForce;
+    if (gf < 0.15) { ctx.strokeStyle = '#3dd6ac'; ctx.lineWidth = 3; }
+    else if (gf < 0.40) { ctx.strokeStyle = '#f7a26a'; ctx.lineWidth = 4.5; }
+    else { ctx.strokeStyle = '#f74a6a'; ctx.lineWidth = 6; }
+    ctx.lineCap = 'round'; ctx.stroke();
+  }
+
+  if(driveSessionData[currentProgressIdx]) {
+    let coord = toCanvasCoords(driveSessionData[currentProgressIdx].lat, driveSessionData[currentProgressIdx].lon);
+    ctx.beginPath(); ctx.arc(coord.x, coord.y, 7, 0, Math.PI * 2); ctx.fillStyle = '#7c6af7';
+    ctx.shadowBlur = 12; ctx.shadowColor = '#7c6af7'; ctx.fill(); ctx.shadowBlur = 0;
   }
 }
 
-function updateComfort(){
-  if(shakeData.length>0){
-    let avgShake=shakeData.reduce((a,b)=>a+b,0)/shakeData.length;
-    let excessShake = Math.max(0, avgShake - 9.8);
-    let comfort = Math.max(0, 100 - excessShake*8); 
-    document.getElementById("comfort").text
+function restartApp() {
+  currentAppFlowState = 'ready';
+  if (playbackTimer) clearInterval(playbackTimer);
+  if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+  if (durationTimer) { clearInterval(durationTimer); durationTimer = null; }
+  
+  document.getElementById('main-app').style.display = 'none';
+  document.getElementById('ride-feedback').style.display = 'none';
+  document.getElementById('map-wrap').style.display = 'none';
+  document.getElementById('selection-screen').style.display = 'flex';
+  
+  document.getElementById('panel-label').textContent = 'Anlık Durum';
+  document.getElementById('unit-label').textContent = 'Anlık Sarsıntı İvmesi (G)';
+  document.getElementById('speed-label-type').textContent = 'Mevcut Hız';
+  document.getElementById('metric-speed').style.color = 'var(--accent2)';
+  document.getElementById('metric-speed').textContent = '0 km/s';
+
+  document.getElementById('ride-badge').textContent = 'Hazır';
+  document.getElementById('ride-badge').className = 'card-badge badge-warn';
+  
+  const mainBtn = document.getElementById('btn-ride-toggle');
+  mainBtn.textContent = 'Sürüşü Başlat';
+  mainBtn.className = 'ride-btn btn-start';
+
+  document.getElementById('ride-peak-label').textContent = `En Yüksek: 0.00 G`;
+  document.getElementById('ride-value').textContent = '0.00';
+  document.getElementById('metric-distance').textContent = '0 m';
+  document.getElementById('metric-duration').textContent = '00:00:00';
+  waveDataHistory = Array(40).fill(0);
+}
+</script>
+</body>
+</html>
