@@ -110,8 +110,10 @@ function drawGraph(val){
 function updateComfort(){
   if(shakeData.length>0){
     let avgShake=shakeData.reduce((a,b)=>a+b,0)/shakeData.length;
-    let comfort=Math.max(0,100-avgShake*5);
-    document.getElementById("comfort").textContent=comfort.toFixed(0)+"%";
+    // Yerçekimi ~9.8 m/s², bunun üzerindeki dalgalanmaları sarsıntı kabul edelim
+    let excessShake = Math.max(0, avgShake - 9.8);
+    let comfort = Math.max(0, 100 - excessShake*8); 
+    document.getElementById("comfort").textContent = comfort.toFixed(0)+"%";
   }
 }
 </script>
