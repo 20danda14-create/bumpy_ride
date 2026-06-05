@@ -59,33 +59,12 @@
     align-items: center;
     justify-content: center;
     padding: 24px;
-    transition: opacity 0.4s ease, transform 0.4s ease;
-  }
-
-  #intro-screen::after {
-    content: '';
-    position: absolute;
-    width: 100%;
-    height: 4px;
-    background: linear-gradient(90deg, transparent, var(--accent), transparent);
-    opacity: 0.3;
-    animation: scanRadar 2s linear infinite;
-    top: 0;
-  }
-
-  @keyframes scanRadar {
-    0% { top: 0%; }
-    100% { top: 100%; }
+    transition: opacity 0.3s ease;
   }
 
   .intro-logo-wrap {
-    animation: introBumpy 0.8s ease-out infinite alternate;
+    text-align: center;
     margin-bottom: 24px;
-  }
-
-  @keyframes introBumpy {
-    0% { transform: translateY(0) scale(1); }
-    100% { transform: translateY(-6px) scale(1.02) skewX(-1deg); }
   }
 
   .intro-title {
@@ -95,7 +74,6 @@
     background: linear-gradient(135deg, var(--text) 30%, var(--accent) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    text-align: center;
   }
 
   .intro-subtitle {
@@ -105,8 +83,6 @@
     letter-spacing: 0.3em;
     text-transform: uppercase;
     margin-top: 10px;
-    text-align: center;
-    opacity: 0.8;
   }
 
   .intro-loader-container {
@@ -121,16 +97,12 @@
 
   .intro-loader-bar {
     position: absolute;
+    left: 0;
+    top: 0;
     height: 100%;
     width: 0%;
     background: linear-gradient(90deg, var(--accent), var(--accent2));
     border-radius: 2px;
-    animation: fillLoader 1.6s cubic-bezier(0.1, 0.85, 0.25, 1) forwards;
-  }
-
-  @keyframes fillLoader {
-    0% { width: 0%; }
-    100% { width: 100%; }
   }
 
   .intro-status {
@@ -250,13 +222,13 @@
   .db-value { font-size: 60px; font-family: var(--mono); font-weight: 700; line-height: 1; margin-bottom: 4px; }
   .db-unit { font-size: 12px; font-family: var(--mono); color: var(--text3); margin-bottom: 12px; }
 
-  /* 3lü Metrik Satırı (Kronometre Dahil) */
+  /* 3lü Metrik Satırı */
   .metrics-row-triple { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px; }
   .metric-subbox { background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 4px; text-align: center; }
   .metric-subbox .m-lbl { font-size: 9px; font-family: var(--mono); color: var(--text3); text-transform: uppercase; margin-bottom: 4px; }
   .metric-subbox .m-val { font-size: 13px; font-family: var(--mono); font-weight: 700; color: var(--text); white-space: nowrap; }
 
-  /* Dynamic Canvas / Graphic Screen Container */
+  /* Visual Containers */
   .visual-container {
     background: var(--surface2); border-radius: var(--radius-sm); height: 110px; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; margin: 12px 0; border: 1px solid rgba(255,255,255,0.03);
   }
@@ -264,7 +236,6 @@
   .vehicle-svg-wrap svg { width: 100%; height: 100%; }
   #wave-canvas { width: 100%; height: 100%; display: none; }
 
-  /* Dynamic Custom Map Canvas Area */
   .map-container {
     background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); height: 220px; margin-top: 16px; position: relative; overflow: hidden; display: none;
   }
@@ -297,7 +268,7 @@
     <div class="intro-subtitle">Sürüş Analiz Laboratuvarı</div>
   </div>
   <div class="intro-loader-container">
-    <div class="intro-loader-bar"></div>
+    <div class="intro-loader-bar" id="intro-progress"></div>
   </div>
   <div class="intro-status" id="intro-status-text">Analiz motoru başlatılıyor...</div>
 </div>
@@ -355,7 +326,7 @@
 
 <div class="app" id="main-app" style="display:none;">
   <div class="header">
-    <div class="logo">Bumpy Ride Engine v4.3</div>
+    <div class="logo">Bumpy Ride Engine v4.4</div>
     <div class="title">Sürüş Analitiği</div>
   </div>
 
@@ -419,31 +390,45 @@
 </div>
 
 <script>
-// --- INTRO SCREEN AUTOMATION ---
+// --- GARANTİLİ DOĞRUSAL INTRO MOTORU ---
 document.addEventListener("DOMContentLoaded", () => {
-  const steps = ["Telemetri modülleri yükleniyor...", "GPS ağ geçitleri taranıyor...", "Bumpy Ride kalibrasyonu tamamlandı."];
-  let idx = 0; const txt = document.getElementById("intro-status-text");
+  const progressBar = document.getElementById("intro-progress");
+  const statusText = document.getElementById("intro-status-text");
+  const introScreen = document.getElementById("intro-screen");
+  const selectionScreen = document.getElementById("selection-screen");
   
-  const timer = setInterval(() => { 
-    if (txt && idx < steps.length - 1) { 
-      idx++; 
-      txt.textContent = steps[idx]; 
-    } 
-  }, 450);
+  let progress = 0;
+  const steps = [
+    { target: 30, text: "Telemetri modülleri yükleniyor..." },
+    { target: 70, text: "GPS ağ geçitleri taranıyor..." },
+    { target: 100, text: "Bumpy Ride kalibrasyonu tamamlandı." }
+  ];
+  let currentStepIdx = 0;
 
-  setTimeout(() => {
-    clearInterval(timer);
-    const scr = document.getElementById("intro-screen");
-    if(scr) {
-      scr.style.opacity = "0"; 
-      scr.style.transform = "scale(1.02)";
-      setTimeout(() => { 
-        scr.style.display = "none"; 
-        const selectScr = document.getElementById("selection-screen");
-        if(selectScr) selectScr.style.display = "flex"; 
-      }, 400);
+  function animateIntro() {
+    if (progress < 100) {
+      progress += 1.5; // Kararlı ve doğrusal artış hızı
+      if (progressBar) progressBar.style.width = Math.min(progress, 100) + "%";
+
+      if (currentStepIdx < steps.length && progress >= steps[currentStepIdx].target) {
+        if (statusText) statusText.textContent = steps[currentStepIdx].text;
+        currentStepIdx++;
+      }
+      requestAnimationFrame(animateIntro);
+    } else {
+      // Yükleme tam %100 bittiği an güvenli geçiş yapısı:
+      if (introScreen) {
+        introScreen.style.opacity = "0";
+        setTimeout(() => {
+          introScreen.style.display = "none";
+          if (selectionScreen) selectionScreen.style.display = "flex";
+        }, 300);
+      }
     }
-  }, 1500);
+  }
+  
+  // Animasyonu başlat
+  requestAnimationFrame(animateIntro);
 });
 
 // App Core State Engine
@@ -511,7 +496,7 @@ function launchMainDashboard() {
     if(meshEl) meshEl.style.display = 'none'; 
     if(waveCanvas) {
       waveCanvas.style.display = 'block';
-      drawWaveGraphFrame(0); // ARTIK RISK YOK, DOĞRUDAN ÇALIŞIR
+      drawWaveGraphFrame(0);
     }
   }
 
@@ -544,69 +529,3 @@ function calculateMotionStream(e) {
     waveDataHistory.shift();
     drawWaveGraphFrame(netG);
   }
-
-  if (isRideActive) {
-    sessionTotalG += netG; sessionCount++;
-    if (netG > sessionMaxG) {
-      sessionMaxG = netG;
-      const peakEl = document.getElementById('ride-peak-label');
-      if(peakEl) peakEl.textContent = `En Yüksek: ${sessionMaxG.toFixed(2)} G`;
-    }
-  }
-}
-
-function animateVehicleGraphic(gVal) {
-  const mesh = document.getElementById('vehicle-mesh');
-  const body = document.getElementById('vehicle-body');
-  if(!mesh || !body) return;
-  
-  if (gVal > 0) {
-    let shakeX = (Math.random() - 0.5) * gVal * 28;
-    let shakeY = (Math.random() - 0.5) * gVal * 28;
-    let rotateDeg = (Math.random() - 0.5) * gVal * 18;
-    mesh.style.transform = `translate(${shakeX}px, ${shakeY}px) rotate(${rotateDeg}deg)`;
-    
-    if (gVal < 0.15) body.setAttribute('fill', '#3dd6ac');      
-    else if (gVal < 0.40) body.setAttribute('fill', '#f7a26a'); 
-    else body.setAttribute('fill', '#f74a6a');                  
-  } else {
-    mesh.style.transform = 'translate(0px, 0px) rotate(0deg)';
-    body.setAttribute('fill', selectedModelType === 'sedan' ? '#3b82f6' : '#ef4444');
-  }
-}
-
-function drawWaveGraphFrame(latestG) {
-  const canvas = document.getElementById('wave-canvas');
-  if(!canvas || !canvas.parentElement || canvas.offsetWidth === 0) return; // KRİTİK GÜVENLİK BARİYERİ
-  
-  const ctx = canvas.getContext('2d');
-  canvas.width = canvas.parentElement.clientWidth; 
-  canvas.height = canvas.parentElement.clientHeight;
-  ctx.clearRect(0,0,canvas.width, canvas.height);
-
-  ctx.strokeStyle = 'rgba(255,255,255,0.03)'; ctx.lineWidth = 1;
-  for(let i=1; i<4; i++) {
-    let y = (canvas.height / 4) * i;
-    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
-  }
-
-  ctx.beginPath();
-  let step = canvas.width / (waveDataHistory.length - 1);
-  for(let i=0; i<waveDataHistory.length; i++) {
-    let val = waveDataHistory[i]; let x = i * step;
-    let y = canvas.height - (Math.min(val, 1.5) / 1.5) * (canvas.height - 20) - 10;
-    if(i===0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-  }
-  
-  if(latestG < 0.15) ctx.strokeStyle = '#3dd6ac';
-  else if(latestG < 0.40) ctx.strokeStyle = '#f7a26a';
-  else ctx.strokeStyle = '#f74a6a';
-  
-  ctx.lineWidth = 2.5; ctx.lineJoin = 'round'; ctx.stroke();
-}
-
-function formatTime(ms) {
-  let totalSecs = Math.floor(ms / 1000);
-  let hrs = Math.floor(totalSecs / 3600);
-  let mins = Math.floor((totalSecs % 3600) / 60);
-  let secs = total
