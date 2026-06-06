@@ -2,8 +2,13 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Bumpy Ride — Leaflet Harita Entegre Sürüm</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Bumpy Ride — Mobil PWA Destekli v5.5</title>
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Bumpy Ride">
+<meta name="mobile-web-app-capable" content="yes">
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -42,7 +47,7 @@
   .option-box.selected { border-color: var(--accent); background: rgba(124,106,247,0.05); }
   .option-name { font-size: 13px; font-weight: 700; margin-top: 6px; }
 
-  .perm-notice-box { background: rgba(247,162,106,0.05); border: 1px solid rgba(247,162,106,0.15); border-radius: var(--radius-sm); padding: 12px; font-size: 11px; color: var(--accent3); text-align: left; margin-top: 20px; font-family: monospace; line-height: 1.4; }
+  .perm-notice-box { background: rgba(61,214,172,0.05); border: 1px solid rgba(61,214,172,0.15); border-radius: var(--radius-sm); padding: 12px; font-size: 11px; color: var(--accent2); text-align: left; margin-top: 20px; font-family: monospace; line-height: 1.4; }
   .perm-btn { width: 100%; padding: 16px; background: var(--accent); color: #fff; border: none; border-radius: var(--radius-sm); font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 20px; -webkit-tap-highlight-color: transparent; }
 
   /* --- APP MAIN --- */
@@ -64,11 +69,14 @@
   .metric-subbox .m-lbl { font-size: 9px; font-family: monospace; color: var(--text3); text-transform: uppercase; }
   .metric-subbox .m-val { font-size: 13px; font-family: monospace; font-weight: 700; margin-top: 4px; }
 
-  /* LEAFLET MAP ELEMENT */
-  .map-container {
-    background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); height: 260px; margin: 16px 0; position: relative; overflow: hidden; z-index: 1;
-  }
+  /* LEAFLET HARİTA KUTUSU */
+  .map-container { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); height: 240px; margin: 16px 0; position: relative; overflow: hidden; z-index: 1; }
   #map { width: 100%; height: 100%; }
+
+  /* SÜRÜŞ SONU KONFOR PANELI */
+  .feedback-box { background: rgba(124,106,247,0.06); border: 1px solid rgba(124,106,247,0.2); border-radius: var(--radius-sm); padding: 14px; margin: 16px 0; display: none; }
+  .feedback-title { font-size: 13px; font-weight: 700; color: var(--accent2); margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
+  .feedback-text { font-size: 12px; font-family: monospace; color: var(--text2); line-height: 1.5; }
 
   .ride-btn-group { display: grid; grid-template-columns: 1fr; gap: 10px; }
   .ride-btn { padding: 16px; border: none; border-radius: var(--radius-sm); font-weight: 600; font-size: 15px; cursor: pointer; text-align: center; -webkit-tap-highlight-color: transparent; }
@@ -83,8 +91,8 @@
 
 <div id="selection-screen">
   <div class="select-card">
-    <div class="select-title">Bumpy Ride v5.4</div>
-    <div class="select-desc">Mekanik ve Konum Kalibrasyonu</div>
+    <div class="select-title">Bumpy Ride v5.5</div>
+    <div class="select-desc">Ana Ekran (PWA) & İvmeölçer Entegrasyonu</div>
     
     <div class="section-divider">1. Araç Simge Tipi</div>
     <div class="vehicle-options">
@@ -99,17 +107,17 @@
     </div>
 
     <div class="perm-notice-box">
-      ⚠️ <strong>ÖNEMLİ GPS İZNİ:</strong><br>
-      Aşağıdaki butona tıkladığınızda tarayıcınız <strong>Konum (GPS) izni</strong> isteyecektir. Lütfen "İzin Ver" seçeneğini seçin, aksi takdirde sürat ve mesafe takibi çalışmaz.
+      🚀 <strong>SENSÖR & GPS KİLİDİ:</strong><br>
+      Ana ekrandan başlatıldığında Apple ve Android kısıtlamalarını aşmak için aşağıdaki butona bastığınızda konum ve hareket izinleri senkronize edilecektir.
     </div>
 
-    <button class="perm-btn" id="btn-core-submit">GPS İznini Tetikle ve Başlat</button>
+    <button class="perm-btn" id="btn-core-submit">Sensörleri Kilitle ve Başlat</button>
   </div>
 </div>
 
 <div class="app" id="main-app" style="display:none;">
   <div class="header">
-    <div class="logo">Bumpy Ride Telemetry</div>
+    <div class="logo">Bumpy Ride PWA Engine</div>
     <div class="title">Sürüş Analitiği</div>
   </div>
 
@@ -127,7 +135,7 @@
       <div class="db-value" id="ride-value">0.00</div>
       <div style="font-size: 11px; color: var(--text3); font-family: monospace" id="ride-peak-label">Tepe Noktası: 0.00 G</div>
     </div>
-    <div style="font-size: 11px; font-family: monospace; color: var(--text3); margin-top: 4px;">Dikey Sarsıntı İvmesi</div>
+    <div style="font-size: 11px; font-family: monospace; color: var(--text3); margin-top: 4px;">Dikey Sarsıntı İvmesi (Z-Aks)</div>
     
     <div class="metrics-row-triple">
       <div class="metric-subbox">
@@ -148,6 +156,14 @@
       <div id="map"></div>
     </div>
 
+    <div class="feedback-box" id="ride-feedback">
+      <div class="feedback-title">
+        <span>📋 Sürüş Konfor Raporu</span>
+        <span id="feedback-score" style="color: var(--accent3); font-family: monospace; font-weight: bold;">Skor: --</span>
+      </div>
+      <div class="feedback-text" id="feedback-text">Analiz raporu hesaplanıyor...</div>
+    </div>
+
     <div id="ride-label" style="text-align: center; font-size: 12px; font-family: monospace; color: var(--text2); margin-bottom: 16px;">Sürüşü başlatıp yola çıkın.</div>
 
     <div class="ride-btn-group">
@@ -162,19 +178,22 @@ let selectedModelType = 'sedan';
 let currentAppFlowState = 'ready'; 
 let driveSessionData = [];
 
-// Geolocation ve Zamanlayıcı Değişkenleri
+// Telemetry & Hesaplama Değişkenleri
 let watchId = null;
 let rideStartTime = null;
 let durationTimer = null;
 let currentSpeedKmh = 0;
-let sessionMaxG = 0;
 
-// Leaflet Harita Yapısı
+// Konfor İstatistik Değişkenleri
+let sessionMaxG = 0;
+let sessionTotalG = 0;
+let sessionCount = 0;
+
+// Leaflet Nesneleri
 let map = null;
 let livePolyline = null; 
 let playbackMarker = null;
 
-// DOM Yüklendiğinde Dinleyicileri Bağla
 window.addEventListener('DOMContentLoaded', () => {
   const addAction = (id, callback) => {
     const el = document.getElementById(id);
@@ -195,23 +214,27 @@ window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('opt-sedan').classList.remove('selected');
   });
 
-  // BURASI KRİTİK: Butona tıklandığı saniye resmi izin mekanizması ateşlenir
+  // ANA EKRAN / PWA Giriş Tetikleyicisi
   addAction('btn-core-submit', () => {
-    if (navigator.geolocation) {
-      document.getElementById('btn-core-submit').textContent = "Uydular aranıyor...";
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          // İzin alındı, ilk konumu kaydet ve paneli aç
-          initLeafletDashboard(pos.coords.latitude, pos.coords.longitude);
-        },
-        (err) => {
-          alert("GPS İzni Reddedildi veya Sinyal Yok! Uygulama simülasyon modunda çalışacak.");
-          initLeafletDashboard(39.9208, 32.8541); // Ankara varsayılan
-        },
-        { enableHighAccuracy: true, timeout: 8000 }
-      );
+    document.getElementById('btn-core-submit').textContent = "Donanımlar Ateşleniyor...";
+    
+    // 1. İvmeölçer İzin Mekanizması (iOS Safari Standalone Desteği Dahil)
+    if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+      DeviceMotionEvent.requestPermission()
+        .then(response => {
+          if (response == 'granted') {
+            requestHardwareGeolocation();
+          } else {
+            alert("Hareket sensörü izni verilmedi. Sarsıntı takibi simüle edilecek.");
+            requestHardwareGeolocation();
+          }
+        })
+        .catch(e => {
+          requestHardwareGeolocation();
+        });
     } else {
-      alert("Cihazınızda GPS donanımı bulunamadı.");
+      // Android Chrome veya Standalone PWA doğrudan bağlama
+      requestHardwareGeolocation();
     }
   });
 
@@ -219,80 +242,99 @@ window.addEventListener('DOMContentLoaded', () => {
   addAction('btn-app-restart', restartApp);
 });
 
-// LEAFLET HARİTASINI BAŞLATMA
+function requestHardwareGeolocation() {
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        initLeafletDashboard(pos.coords.latitude, pos.coords.longitude);
+      },
+      (err) => {
+        alert("GPS Bağlantısı Kurulamadı. Şehir merkezinden simülasyon başlatılıyor.");
+        initLeafletDashboard(39.9208, 32.8541); 
+      },
+      { enableHighAccuracy: true, timeout: 7000 }
+    );
+  } else {
+    initLeafletDashboard(39.9208, 32.8541);
+  }
+}
+
 function initLeafletDashboard(startLat, startLon) {
   document.getElementById('selection-screen').style.display = 'none';
   document.getElementById('main-app').style.display = 'block';
 
-  // Harita nesnesini oluştur ve harita sunucusuna (OSM) bağla
   if (!map) {
     map = L.map('map', { zoomControl: false }).setView([startLat, startLon], 16);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '© OpenStreetMap'
+      maxZoom: 19
     }).addTo(map);
     
-    // Canlı sürüş çizgisi katmanı (Kırmızı ve Kalın)
     livePolyline = L.polyline([], { color: '#f74a6a', weight: 5, opacity: 0.85 }).addTo(map);
   } else {
     map.setView([startLat, startLon], 16);
     livePolyline.setLatLngs([]);
   }
   
-  // İlk konuma sabit bir işaretçi koyalım
   L.circleMarker([startLat, startLon], { radius: 6, color: '#3dd6ac', fillOpacity: 1 }).addTo(map);
   
-  // Sensör dinleyicilerini arka planda hazırla
-  if (window.DeviceMotionEvent) {
-    window.addEventListener('devicemotion', calculateMotionStream, true);
-  }
+  // Ana ekran ve PWA için donanım hareket dinleyicisini kesin kitleme
+  window.removeEventListener('devicemotion', calculateMotionStream, true);
+  window.addEventListener('devicemotion', calculateMotionStream, true);
 }
 
-// IVMEÖLÇER VERİ AKIŞI
+// ANA EKRAN UYUMLU DİKEY SARSINTI FİLTRESİ
 function calculateMotionStream(e) {
   if (currentAppFlowState === 'playing') return;
+  
   let acc = e.accelerationIncludingGravity || e.acceleration;
-  if (!acc || acc.x === null) return;
+  if (!acc || acc.z === null) return;
 
-  let rawForce = Math.sqrt(acc.x * acc.x + acc.y * acc.y + acc.z * acc.z);
+  // Cihazın dikey eksende (Z ekseni) maruz kaldığı anlık kuvveti filtreleme
+  let rawForce = Math.abs(acc.z);
   let netG = Math.abs((rawForce / 9.80665) - 1.0);
-  if (netG < 0.05) netG = 0; // Filtreleme
+  
+  // Statik gürültü ve cihaz sallantı filtresi
+  if (netG < 0.06) netG = 0;
+  if (netG > 2.5) netG = 2.5; // Aşırı sapmaları budama
 
   document.getElementById('ride-value').textContent = netG.toFixed(2);
   
-  if (currentAppFlowState === 'recording' && netG > sessionMaxG) {
-    sessionMaxG = netG;
-    document.getElementById('ride-peak-label').textContent = `Tepe Noktası: ${sessionMaxG.toFixed(2)} G`;
+  if (currentAppFlowState === 'recording') {
+    sessionTotalG += netG;
+    sessionCount++;
+    
+    if (netG > sessionMaxG) {
+      sessionMaxG = netG;
+      document.getElementById('ride-peak-label').textContent = `Tepe Noktası: ${sessionMaxG.toFixed(2)} G`;
+    }
   }
 }
 
-// ANA BUTON KONTROL MEKANİZMASI
 function handleMainButtonClick() {
   const btn = document.getElementById('btn-ride-toggle');
 
   if (currentAppFlowState === 'ready') {
     currentAppFlowState = 'recording';
-    driveSessionData = []; sessionMaxG = 0; currentSpeedKmh = 0;
+    driveSessionData = []; sessionMaxG = 0; sessionTotalG = 0; sessionCount = 0; currentSpeedKmh = 0;
     rideStartTime = Date.now();
     
+    document.getElementById('ride-feedback').style.display = 'none';
     document.getElementById('speed-label-type').textContent = 'Mevcut Hız';
     document.getElementById('metric-speed').style.color = 'var(--accent2)';
     document.getElementById('ride-badge').textContent = 'CANLI TAKİP'; 
     document.getElementById('ride-badge').className = 'card-badge badge-active';
-    document.getElementById('ride-label').textContent = 'GPS uyduları ve rota aktif olarak haritaya işleniyor...';
+    document.getElementById('ride-label').textContent = 'Donanım sensörleri ana ekran modunda aktif...';
     
-    btn.textContent = 'Sürüşü Bitir ve Haritalandır'; 
+    btn.textContent = 'Sürüşü Bitir ve Raporla'; 
     btn.className = 'ride-btn btn-stop';
     
     if(livePolyline) livePolyline.setLatLngs([]);
     if(playbackMarker) { map.removeLayer(playbackMarker); playbackMarker = null; }
 
-    // Süre Sayacı
     durationTimer = setInterval(() => {
       document.getElementById('metric-duration').textContent = formatTime(Date.now() - rideStartTime);
     }, 1000);
 
-    // KESİNTİSİZ GERÇEK ZAMANLI GPS TAKİBİ
     if (navigator.geolocation) {
       watchId = navigator.geolocation.watchPosition(
         (pos) => {
@@ -301,7 +343,6 @@ function handleMainButtonClick() {
           let lat = pos.coords.latitude;
           let lon = pos.coords.longitude;
           
-          // Sürat Hesabı (Cihazın donanımsal GPS sürati yoksa Haversine ile tamamla)
           if (pos.coords.speed !== null && pos.coords.speed >= 0) {
             currentSpeedKmh = Math.round(pos.coords.speed * 3.6);
           } else if (driveSessionData.length > 0) {
@@ -313,19 +354,18 @@ function handleMainButtonClick() {
           
           document.getElementById('metric-speed').textContent = `${currentSpeedKmh} km/s`;
           
-          // Veri Havuzuna Ekle
-          driveSessionData.push({ lat, lon, speed: currentSpeedKmh, timestamp: Date.now() });
+          // Anlık dikey ivmeyi de koordinat ile eşleştirerek havuzla
+          let currentNetG = parseFloat(document.getElementById('ride-value').textContent) || 0;
+          driveSessionData.push({ lat, lon, speed: currentSpeedKmh, gForce: currentNetG, timestamp: Date.now() });
           
-          // Leaflet Çizgisini Güncelle ve Haritayı Oraya Kaydır
           let currentLatLng = [lat, lon];
           livePolyline.addLatLng(currentLatLng);
           map.setView(currentLatLng, 17);
           
-          // Toplam Mesafeyi Hesapla
           calculateTotalDistanceUI();
         },
-        (err) => console.warn("GPS Sinyal Hatası:", err.message), 
-        { enableHighAccuracy: true, timeout: 4000, maximumAge: 0 }
+        (err) => console.warn("PWA GPS Sinyal Kaybı:", err.message), 
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
       );
     }
   } 
@@ -336,14 +376,16 @@ function handleMainButtonClick() {
     
     document.getElementById('ride-badge').textContent = 'BİTTİ'; 
     document.getElementById('ride-badge').className = 'card-badge badge-warn';
-    document.getElementById('ride-label').textContent = 'Sürüş tamamlandı. Güzergahınız Leaflet üzerinde kilitlendi.';
+    document.getElementById('ride-label').textContent = 'Sürüş sonlandırıldı. Konfor analizi döküldü.';
     
-    // Eğer test ortamında hiç konum verisi toplanmadıysa haritanın boş kalmaması için test rotası üret
     if (driveSessionData.length < 2) {
       injectMockupRouteForTesting();
     }
 
-    btn.textContent = '▶ Leaflet Üzerinde Güzergahı Oynat'; 
+    // Konfor değerlendirme motorunu ateşle
+    buildRideComfortReport();
+
+    btn.textContent = '▶ Güzergah Tekrarını Oynat'; 
     btn.className = 'ride-btn btn-play';
   } 
   else if (currentAppFlowState === 'summary') {
@@ -357,7 +399,39 @@ function handleMainButtonClick() {
   }
 }
 
-// LEAFLET ÜZERİNDE ANİMASYONLU OYNATIM (PLAY)
+// SÜRÜŞ SONU KONFOR DEĞERLENDİRME MOTORU
+function buildRideComfortReport() {
+  const feedbackBox = document.getElementById('ride-feedback');
+  const scoreEl = document.getElementById('feedback-score');
+  const textEl = document.getElementById('feedback-text');
+  
+  // Ortalama dikey sarsıntı ivmesi
+  let avgG = sessionCount > 0 ? (sessionTotalG / sessionCount) : 0.02;
+  
+  // Algoritma: Başlangıç skoru 100. Ortalama darbe ve tepe noktasına göre penalize et
+  let comfortScore = 100 - (avgG * 140) - (sessionMaxG * 35);
+  comfortScore = Math.max(5, Math.min(100, Math.round(comfortScore)));
+
+  scoreEl.textContent = `%${comfortScore}`;
+  feedbackBox.style.display = 'block';
+
+  let distanceStr = document.getElementById('metric-distance').textContent;
+  let durationStr = document.getElementById('metric-duration').textContent;
+
+  let reportSummary = `Mesafe: ${distanceStr} | Süre: ${durationStr} | Maksimum Şok: ${sessionMaxG.toFixed(2)} G. `;
+
+  if (comfortScore >= 85) {
+    textEl.textContent = reportSummary + "Harika konfor! Sürüş rotasındaki zemin oldukça pürüzsüz veya süspansiyon emilimi mükemmel seviyede çalıştı.";
+  } else if (comfortScore >= 65) {
+    textEl.textContent = reportSummary + "Standart konfor düzeyi. Şehir içi asfalt dalgalanmaları ve rutin tümsek geçişleri kaydedildi.";
+  } else if (comfortScore >= 45) {
+    textEl.textContent = reportSummary + "⚠️ Düşük Konfor! Güzergahta belirgin dikey sarsıntılar ve sarsıcı zemin profili saptandı. Amortisör yükü yüksek.";
+  } else {
+    textEl.textContent = reportSummary + "🚨 Kritik Yol Koşulu! Yoğun çukur, parke taşı veya çok agresif tümsek geçişleri dikey ivmelenmeyi üst sınıra taşıdı.";
+  }
+}
+
+// LEAFLET REPLAY SİSTEMİ
 let playbackIdx = 0;
 let playbackTimer = null;
 
@@ -366,12 +440,10 @@ function startLeafletAnimatedPlayback() {
   
   playbackIdx = 0;
   document.getElementById('panel-label').textContent = 'GÜZERGAH TEKRARI';
-  document.getElementById('speed-label-type').textContent = 'Anlık Sürat (Tekrar)';
+  document.getElementById('speed-label-type').textContent = 'Anlık Sürat';
   
-  // Haritadaki çizgiyi oynatım için önce temizleyip sıfırdan çizdireceğiz
   livePolyline.setLatLngs([]);
   
-  // Oynatım simgesini (Marker) haritaya koyalım
   let startPt = driveSessionData[0];
   playbackMarker = L.marker([startPt.lat, startPt.lon]).addTo(map);
   map.setView([startPt.lat, startPt.lon], 17);
@@ -381,25 +453,24 @@ function startLeafletAnimatedPlayback() {
   playbackTimer = setInterval(() => {
     if (playbackIdx >= driveSessionData.length) {
       clearInterval(playbackTimer);
-      document.getElementById('panel-label').textContent = 'TEKRAR BİTTİ';
+      document.getElementById('panel-label').textContent = 'TEKRAR TAMAMLANDI';
       return;
     }
     
     let currentPoint = driveSessionData[playbackIdx];
     let pt = [currentPoint.lat, currentPoint.lon];
     
-    // Simgeyi kaydır ve arkasında iz bırakarak çizgiyi uzat
     playbackMarker.setLatLng(pt);
     livePolyline.addLatLng(pt);
     map.setView(pt, 17);
     
+    document.getElementById('ride-value').textContent = currentPoint.gForce.toFixed(2);
     document.getElementById('metric-speed').textContent = `${currentPoint.speed} km/s`;
     
     playbackIdx++;
-  }, 250); // Konumların geçiş hızı (milisaniye)
+  }, 200);
 }
 
-// HAVERSINE METRİK MESAFE HESAPLAYICI
 function computeHaversineDistance(lat1, lon1, lat2, lon2) {
   const R = 6371e3;
   const phi1 = lat1 * Math.PI / 180; const phi2 = lat2 * Math.PI / 180;
@@ -425,18 +496,24 @@ function formatTime(ms) {
   return `${hrs.toString().padStart(2,'0')}:${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`;
 }
 
-// Eğer cihaz kapalı alandaysa haritada iz gösterilmesi için yapay koordinat yerleştirici
 function injectMockupRouteForTesting() {
   let startLat = map.getCenter().lat;
   let startLon = map.getCenter().lng;
   driveSessionData = [];
-  for (let i = 0; i < 30; i++) {
-    let lat = startLat + (i * 0.00012);
-    let lon = startLon + (Math.sin(i * 0.5) * 0.00008);
-    let speed = Math.round(40 + Math.sin(i) * 10);
-    driveSessionData.push({ lat, lon, speed, timestamp: Date.now() });
+  for (let i = 0; i < 35; i++) {
+    let lat = startLat + (i * 0.00014);
+    let lon = startLon + (Math.sin(i * 0.4) * 0.00009);
+    let speed = Math.round(35 + Math.sin(i) * 12);
+    let mockG = i % 10 === 0 ? 0.75 : (i % 6 === 0 ? 0.28 : 0.02);
+    
+    driveSessionData.push({ lat, lon, speed, gForce: mockG, timestamp: Date.now() });
     livePolyline.addLatLng([lat, lon]);
+    
+    sessionTotalG += mockG;
+    sessionCount++;
+    if (mockG > sessionMaxG) sessionMaxG = mockG;
   }
+  document.getElementById('ride-peak-label').textContent = `Tepe Noktası: ${sessionMaxG.toFixed(2)} G`;
   calculateTotalDistanceUI();
 }
 
@@ -450,8 +527,9 @@ function restartApp() {
   if(livePolyline) livePolyline.setLatLngs([]);
   
   document.getElementById('main-app').style.display = 'none';
+  document.getElementById('ride-feedback').style.display = 'none';
   document.getElementById('selection-screen').style.display = 'flex';
-  document.getElementById('btn-core-submit').textContent = "GPS İznini Tetikle ve Başlat";
+  document.getElementById('btn-core-submit').textContent = "Sensörleri Kilitle ve Başlat";
   
   document.getElementById('panel-label').textContent = 'Anlık Veri Akışı';
   document.getElementById('speed-label-type').textContent = 'Mevcut Hız';
