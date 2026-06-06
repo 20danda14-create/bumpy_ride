@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Bumpy Ride — Kesin Şok Çözümlü v5.6</title>
+<title>Bumpy Ride — Kilitlenmeyen PWA v5.7</title>
 
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -89,8 +89,8 @@
 
 <div id="selection-screen">
   <div class="select-card">
-    <div class="select-title">Bumpy Ride v5.6</div>
-    <div class="select-desc">3-Eksenli Birleşik Şok Filtresi & PWA Kilidi</div>
+    <div class="select-title">Bumpy Ride v5.7</div>
+    <div class="select-desc">Kilitlenmeyen Doğrusal Tetikleyici Motoru</div>
     
     <div class="section-divider">1. Araç Simge Tipi</div>
     <div class="vehicle-options">
@@ -105,8 +105,8 @@
     </div>
 
     <div class="perm-notice-box">
-      🛡️ <strong>3-EKSENLİ AMORTİSÖR KALİBRASYONU:</strong><br>
-      Telefonun dik/yatay tüm duruş açıları eşitlenir. Gelişmiş sürüş konfor değerlendirmesi otomatik olarak raporlanır.
+      ⚡ <strong>DONMA ÖNLEYİCİ SİSTEM:</strong><br>
+      Ana ekrandan açılışta yaşanan donma sorunu giderilmiştir. Butona bastığınızda donanım senkronizasyonu kesintisiz başlayacaktır.
     </div>
 
     <button class="perm-btn" id="btn-core-submit">Sensör Donanımını Ateşle</button>
@@ -159,4 +159,127 @@
         <span>📋 Sürüş Konfor Raporu</span>
         <span id="feedback-score" style="color: var(--accent3); font-family: monospace; font-weight: bold;">Skor: --</span>
       </div>
-      <div class="feedback-text" id="feedback-text">
+      <div class="feedback-text" id="feedback-text">Analiz bekleniyor...</div>
+    </div>
+
+    <div id="ride-label" style="text-align: center; font-size: 12px; font-family: monospace; color: var(--text2); margin-bottom: 16px;">Sürüşü başlatıp yola çıkın.</div>
+
+    <div class="ride-btn-group">
+      <button class="ride-btn btn-start" id="btn-ride-toggle">Sürüşü Başlat</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// State Management
+let selectedModelType = 'sedan';
+let currentAppFlowState = 'ready'; 
+let driveSessionData = [];
+
+// Telemetry Tic-Tac
+let watchId = null;
+let rideStartTime = null;
+let durationTimer = null;
+let currentSpeedKmh = 0;
+
+// İvme Havuzu
+let sessionMaxG = 0;
+let sessionTotalG = 0;
+let sessionCount = 0;
+
+// Leaflet Engine
+let map = null;
+let livePolyline = null; 
+let playbackMarker = null;
+
+// DOM Yükleme Dinleyicileri (Kilitlenmeyi önlemek için click bazlı sarmalayıcılar)
+window.addEventListener('DOMContentLoaded', () => {
+  
+  const setupClickOnly = (id, handler) => {
+    const element = document.getElementById(id);
+    if (element) {
+      element.addEventListener('click', handler, false);
+    }
+  };
+
+  setupClickOnly('opt-sedan', () => {
+    selectedModelType = 'sedan';
+    document.getElementById('opt-sedan').classList.add('selected');
+    document.getElementById('opt-suv').classList.remove('selected');
+  });
+
+  setupClickOnly('opt-suv', () => {
+    selectedModelType = 'suv';
+    document.getElementById('opt-suv').classList.add('selected');
+    document.getElementById('opt-sedan').classList.remove('selected');
+  });
+
+  // DONMAYI ÖNLEYEN DOĞRUSAL TETİKLEYİCİ BUTON
+  setupClickOnly('btn-core-submit', () => {
+    document.getElementById('btn-core-submit').textContent = "Donanım Bağlanıyor...";
+    
+    // Kilitlenmeye sebep olan async/await kaldırıldı, tamamen senkronize kontrol zinciri kuruldu
+    if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+      DeviceMotionEvent.requestPermission()
+        .then((permissionState) => {
+          bypassAndBindHardwareHub();
+        })
+        .catch((err) => {
+          console.log("Sensör izin istisnası yakalandı, güvenli geçiş yapılıyor.");
+          bypassAndBindHardwareHub();
+        });
+    } else {
+      bypassAndBindHardwareHub();
+    }
+  });
+
+  setupClickOnly('btn-ride-toggle', handleMainButtonClick);
+  setupClickOnly('btn-app-restart', restartApp);
+});
+
+function bypassAndBindHardwareHub() {
+  // Hareket sensörünü doğrudan kitle ve dinlemeye al
+  window.removeEventListener('devicemotion', calculateMotionStream, true);
+  window.addEventListener('devicemotion', calculateMotionStream, true);
+
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        initLeafletDashboard(pos.coords.latitude, pos.coords.longitude);
+      },
+      () => {
+        // GPS uydusu hemen yanıt vermezse arayüzün donmaması için Ankara'dan haritayı aç
+        initLeafletDashboard(39.9208, 32.8541);
+      },
+      { enableHighAccuracy: true, timeout: 5000 }
+    );
+  } else {
+    initLeafletDashboard(39.9208, 32.8541);
+  }
+}
+
+function initLeafletDashboard(startLat, startLon) {
+  document.getElementById('selection-screen').style.display = 'none';
+  document.getElementById('main-app').style.display = 'block';
+
+  if (!map) {
+    map = L.map('map', { zoomControl: false }).setView([startLat, startLon], 16);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19
+    }).addTo(map);
+    
+    livePolyline = L.polyline([], { color: '#f74a6a', weight: 5, opacity: 0.85 }).addTo(map);
+  } else {
+    map.setView([startLat, startLon], 16);
+    livePolyline.setLatLngs([]);
+  }
+  
+  L.circleMarker([startLat, startLon], { radius: 6, color: '#3dd6ac', fillOpacity: 1 }).addTo(map);
+  
+  // Haritayı bir defa render'a zorlayarak gri ekran kalmasını önle
+  setTimeout(() => { map.invalidateSize(); }, 300);
+}
+
+// 3 EKSENLİ BİRLEŞİK ŞOK HESAPLAMA MOTORU
+function calculateMotionStream(e) {
+  if (currentAppFlowState === 'playing')
