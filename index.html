@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Bumpy Ride — Yerel Bağımsız v5.9</title>
+<title>Bumpy Ride — Temiz Kararlı v6.0</title>
 
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -49,7 +49,6 @@
   .metric-subbox .m-lbl { font-size: 9px; font-family: monospace; color: var(--text3); text-transform: uppercase; }
   .metric-subbox .m-val { font-size: 13px; font-family: monospace; font-weight: 700; margin-top: 4px; }
 
-  /* NATIVE SVG MAP CONTAINER (SIYAH EKRAN ENGELLEYİCİ) */
   .map-container { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); height: 220px; margin: 16px 0; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; }
   #native-svg-route { width: 100%; height: 100%; background: #151522; }
 
@@ -62,10 +61,6 @@
   .btn-start { background: var(--accent2); color: #0a0a0f; }
   .btn-stop { background: var(--danger); color: #fff; }
   .btn-play { background: #7c6af7; color: #fff; }
-
-  .config-row { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--border); }
-  .vehicle-toggle-btn { background: var(--surface2); border: 1px solid var(--border); padding: 6px 12px; border-radius: 6px; color: var(--text2); font-size: 12px; cursor: pointer; }
-  .vehicle-toggle-btn.selected { border-color: var(--accent); color: #fff; background: rgba(124,106,247,0.1); }
 </style>
 </head>
 <body>
@@ -73,7 +68,7 @@
 <div class="app">
   <div class="header">
     <div class="logo">Bumpy Ride Telemetry</div>
-    <div class="title">Sürüş Analitiği v5.9</div>
+    <div class="title">Sürüş Analitiği v6.0</div>
   </div>
 
   <div class="card">
@@ -111,7 +106,6 @@
           </pattern>
         </defs>
         <rect width="100%" height="100%" fill="url(#grid)" />
-        
         <polyline id="svg-polyline" points="" fill="none" stroke="#f74a6a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
         <circle id="svg-marker" cx="100" cy="100" r="5" fill="#3dd6ac" style="display:none;" />
       </svg>
@@ -125,29 +119,20 @@
       <div class="feedback-text" id="feedback-text">Analiz bekleniyor...</div>
     </div>
 
-    <div id="ride-label" style="text-align: center; font-size: 12px; font-family: monospace; color: var(--text2); margin-bottom: 16px;">Aşağıdaki butona basarak telemetriyi başlatın.</div>
+    <div id="ride-label" style="text-align: center; font-size: 12px; font-family: monospace; color: var(--text2); margin-bottom: 16px;">Sürüşü başlat butonuna basarak izinleri onaylayın.</div>
 
     <div class="ride-btn-group">
       <button class="ride-btn btn-start" id="btn-ride-toggle">Sürüşü Başlat</button>
-    </div>
-
-    <div class="config-row">
-      <span style="font-size: 12px; color: var(--text3); font-family: monospace;">Model Simgesi:</span>
-      <div>
-        <button class="vehicle-toggle-btn selected" id="toggle-sedan">🚗 Sedan</button>
-        <button class="vehicle-toggle-btn" id="toggle-suv">🚙 SUV</button>
-      </div>
     </div>
   </div>
 </div>
 
 <script>
-// State Management
-let selectedModelType = 'sedan';
+// Global Durum Yönetimi
 let currentAppFlowState = 'ready'; 
 let driveSessionData = [];
 
-// Telemetry Tic-Tac
+// Zamanlayıcılar ve Takip ID'leri
 let watchId = null;
 let rideStartTime = null;
 let durationTimer = null;
@@ -162,27 +147,14 @@ let sessionCount = 0;
 let minLat = null, maxLat = null, minLon = null, maxLon = null;
 
 window.addEventListener('DOMContentLoaded', () => {
-  
-  // Sensör Olay Dinleyicisini Tarayıcıya Doğrudan Ekle
+  // İlk yüklemede sensör dinleyicisini doğrudan bağla (Destekleyen tarayıcılar için)
   window.addEventListener('devicemotion', calculateMotionStream, true);
 
-  // Araç Tipi Seçimleri
-  document.getElementById('toggle-sedan').addEventListener('click', () => {
-    selectedModelType = 'sedan';
-    document.getElementById('toggle-sedan').classList.add('selected');
-    document.getElementById('toggle-suv').classList.remove('selected');
-  });
-
-  document.getElementById('toggle-suv').addEventListener('click', () => {
-    selectedModelType = 'suv';
-    document.getElementById('toggle-suv').classList.add('selected');
-    document.getElementById('toggle-sedan').classList.remove('selected');
-  });
-
+  // Ana Tetikleyici Buton Dinleyicisi
   document.getElementById('btn-ride-toggle').addEventListener('click', handleMainButtonClick);
 });
 
-// 3 EKSENLİ SARSINTI ANALİZİ (JİROSKOP & İVMEÖLÇER KATMANI)
+// 3 EKSENLİ BİLEŞKE İVME HESAPLAMA MOTORU
 function calculateMotionStream(e) {
   if (currentAppFlowState === 'playing') return;
 
@@ -217,22 +189,29 @@ function handleMainButtonClick() {
   const btn = document.getElementById('btn-ride-toggle');
 
   if (currentAppFlowState === 'ready') {
+    // KULLANICI ETKİLEŞİM ANINDA İZİNLERİ KESİN OLARAK TETİKLE
+    if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+      DeviceMotionEvent.requestPermission()
+        .then(permissionState => {
+          if (permissionState === 'granted') {
+            window.addEventListener('devicemotion', calculateMotionStream, true);
+          }
+        })
+        .catch(err => console.log("Sensör izin talebi atlandı veya reddedildi."));
+    }
+
+    // Durumu Kayıt Moduna Al
     currentAppFlowState = 'recording';
     driveSessionData = []; sessionMaxG = 0; sessionTotalG = 0; sessionCount = 0; currentSpeedKmh = 0;
     minLat = null; maxLat = null; minLon = null; maxLon = null;
     rideStartTime = Date.now();
     
-    // iOS/Safari için Sensör Uyandırma İzni
-    if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-      DeviceMotionEvent.requestPermission().catch(()=>{});
-    }
-
     document.getElementById('ride-feedback').style.display = 'none';
     document.getElementById('speed-label-type').textContent = 'Mevcut Hız';
     document.getElementById('metric-speed').style.color = 'var(--accent2)';
     document.getElementById('ride-badge').textContent = 'CANLI TAKİP'; 
     document.getElementById('ride-badge').className = 'card-badge badge-active';
-    document.getElementById('ride-label').textContent = 'Sürüş verileri ve sarsıntı jiroskopu aktif.';
+    document.getElementById('ride-label').textContent = 'Sürüş kaydediliyor. Yol sarsıntıları takipte...';
     
     document.getElementById('svg-polyline').setAttribute('points', '');
     document.getElementById('svg-marker').style.display = 'none';
@@ -240,10 +219,12 @@ function handleMainButtonClick() {
     btn.textContent = 'Sürüşü Bitir ve Raporla'; 
     btn.className = 'ride-btn btn-stop';
 
+    // Süre Sayacını Başlat
     durationTimer = setInterval(() => {
       document.getElementById('metric-duration').textContent = formatTime(Date.now() - rideStartTime);
     }, 1000);
 
+    // Geolocation (GPS) Takibini Başlat ve İzin İste
     if (navigator.geolocation) {
       watchId = navigator.geolocation.watchPosition(
         (pos) => {
@@ -269,9 +250,14 @@ function handleMainButtonClick() {
           updateNativeSVGMap();
           calculateTotalDistanceUI();
         },
-        (err) => console.warn("GPS Sinyal Bekleniyor..."), 
-        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+        (err) => {
+          console.warn("GPS İzin veya Sinyal Hatası:", err.message);
+          document.getElementById('ride-label').textContent = "GPS Sinyali bekleniyor (Açık alana çıkın)...";
+        }, 
+        { enableHighAccuracy: true, timeout: 6000, maximumAge: 0 }
       );
+    } else {
+      document.getElementById('ride-label').textContent = "Cihazda GPS desteği bulunamadı.";
     }
   } 
   else if (currentAppFlowState === 'recording') {
@@ -281,15 +267,16 @@ function handleMainButtonClick() {
     
     document.getElementById('ride-badge').textContent = 'BİTTİ'; 
     document.getElementById('ride-badge').className = 'card-badge badge-warn';
-    document.getElementById('ride-label').textContent = 'Sürüş sonlandırıldı. Konfor analizi döküldü.';
+    document.getElementById('ride-label').textContent = 'Sürüş sonlandırıldı. Konfor analizi hesaplandı.';
     
+    // Eğer test için evde basıldıysa simülasyon verisi yükle
     if (driveSessionData.length < 2) {
       injectMockupRouteForTesting();
     }
 
     buildRideComfortReport();
 
-    btn.textContent = '▶ Güzergah Tekrarını Oynat'; 
+    btn.textContent = '▶ Sürüş Güzergahını Tekrar Oynat'; 
     btn.className = 'ride-btn btn-play';
   } 
   else if (currentAppFlowState === 'summary') {
@@ -303,9 +290,183 @@ function handleMainButtonClick() {
   }
 }
 
-// BAĞIMSIZ NATIVE SVG HARİTA MOTORU
+// NATIVE SVG HARİTA İŞLEME KATMANI
 function updateNativeSVGMap() {
   if (driveSessionData.length === 0) return;
 
   let lats = driveSessionData.map(p => p.lat);
-  let
+  let lons = driveSessionData.map(p => p.lon);
+  
+  minLat = Math.min(...lats); maxLat = Math.max(...lats);
+  minLon = Math.min(...lons); maxLon = Math.max(...lons);
+
+  let latRange = maxLat - minLat || 0.001;
+  let lonRange = maxLon - minLon || 0.001;
+
+  let pointsAttr = "";
+  driveSessionData.forEach(p => {
+    let x = 20 + ((p.lon - minLon) / lonRange) * 160;
+    let y = 180 - ((p.lat - minLat) / latRange) * 160; 
+    pointsAttr += `${x},${y} `;
+  });
+
+  document.getElementById('svg-polyline').setAttribute('points', pointsAttr.trim());
+
+  if (driveSessionData.length > 0) {
+    let last = driveSessionData[driveSessionData.length - 1];
+    let markerX = 20 + ((last.lon - minLon) / lonRange) * 160;
+    let markerY = 180 - ((last.lat - minLat) / latRange) * 160;
+    
+    const marker = document.getElementById('svg-marker');
+    marker.setAttribute('cx', markerX);
+    marker.setAttribute('cy', markerY);
+    marker.style.display = 'block';
+  }
+}
+
+// S SÜRÜŞ KONFOR ALGORİTMASI
+function buildRideComfortReport() {
+  const feedbackBox = document.getElementById('ride-feedback');
+  const scoreEl = document.getElementById('feedback-score');
+  const textEl = document.getElementById('feedback-text');
+  
+  let avgG = sessionCount > 0 ? (sessionTotalG / sessionCount) : 0.02;
+  let comfortScore = 100 - (avgG * 150) - (sessionMaxG * 30);
+  comfortScore = Math.max(5, Math.min(100, Math.round(comfortScore)));
+
+  scoreEl.textContent = `%${comfortScore}`;
+  feedbackBox.style.display = 'block';
+
+  let distanceStr = document.getElementById('metric-distance').textContent;
+  let durationStr = document.getElementById('metric-duration').textContent;
+  let reportSummary = `Mesafe: ${distanceStr} | Süre: ${durationStr} | En Büyük Şok Darbesi: ${sessionMaxG.toFixed(2)} G. `;
+
+  if (comfortScore >= 85) {
+    textEl.textContent = reportSummary + "Mükemmel Konfor! Süspansiyon emilimi harika çalıştı.";
+  } else if (comfortScore >= 68) {
+    textEl.textContent = reportSummary + "Standart Konfor. Rutin asfalt dalgalanmaları ve bağlantı elemanları geçişi.";
+  } else if (comfortScore >= 45) {
+    textEl.textContent = reportSummary + "⚠️ Düşük Konfor! Bozuk satıhlar veya sert amortisör tepkileri saptandı.";
+  } else {
+    textEl.textContent = reportSummary + "🚨 Kritik Yol Koşulu! Yoğun çukurlar, parke taşları veya agresif tümsekler birleşik ivmeyi fırlattı.";
+  }
+}
+
+// ANIMATED REPLAY MOTORU
+let playbackIdx = 0;
+let playbackTimer = null;
+
+function startNativeAnimatedPlayback() {
+  if (driveSessionData.length === 0) return;
+  
+  playbackIdx = 0;
+  document.getElementById('panel-label').textContent = 'GÜZERGAH TEKRARI';
+  document.getElementById('speed-label-type').textContent = 'Anlık Sürat';
+  
+  let latRange = maxLat - minLat || 0.001;
+  let lonRange = maxLon - minLon || 0.001;
+
+  document.getElementById('svg-polyline').setAttribute('points', '');
+  let currentPointsStr = "";
+
+  if (playbackTimer) clearInterval(playbackTimer);
+  
+  playbackTimer = setInterval(() => {
+    if (playbackIdx >= driveSessionData.length) {
+      clearInterval(playbackTimer);
+      document.getElementById('panel-label').textContent = 'TEKRAR BİTTİ';
+      return;
+    }
+    
+    let p = driveSessionData[playbackIdx];
+    let px = 20 + ((p.lon - minLon) / lonRange) * 160;
+    let py = 180 - ((p.lat - minLat) / latRange) * 160;
+    
+    currentPointsStr += `${px},${py} `;
+    document.getElementById('svg-polyline').setAttribute('points', currentPointsStr.trim());
+    
+    let marker = document.getElementById('svg-marker');
+    marker.setAttribute('cx', px);
+    marker.setAttribute('cy', py);
+    
+    document.getElementById('ride-value').textContent = p.gForce.toFixed(2);
+    document.getElementById('metric-speed').textContent = `${p.speed} km/s`;
+    
+    playbackIdx++;
+  }, 150);
+}
+
+function computeHaversineDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371e3;
+  const phi1 = lat1 * Math.PI / 180; const phi2 = lat2 * Math.PI / 180;
+  const dPhi = (lat2 - lat1) * Math.PI / 180; const dLam = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dPhi/2) * Math.sin(dPhi/2) + Math.cos(phi1) * Math.cos(phi2) * Math.sin(dLam/2) * Math.sin(dLam/2);
+  return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+}
+
+function calculateTotalDistanceUI() {
+  if (driveSessionData.length < 2) return;
+  let total = 0;
+  for(let i=1; i<driveSessionData.length; i++) {
+    total += computeHaversineDistance(driveSessionData[i-1].lat, driveSessionData[i-1].lon, driveSessionData[i].lat, driveSessionData[i].lon);
+  }
+  document.getElementById('metric-distance').textContent = total >= 1000 ? `${(total/1000).toFixed(2)} km` : `${Math.round(total)} m`;
+}
+
+function formatTime(ms) {
+  let totalSecs = Math.floor(ms / 1000);
+  let hrs = Math.floor(totalSecs / 3600);
+  let mins = Math.floor((totalSecs % 3600) / 60);
+  let secs = totalSecs % 60;
+  return `${hrs.toString().padStart(2,'0')}:${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`;
+}
+
+function injectMockupRouteForTesting() {
+  let baseLat = 39.9208;
+  let baseLon = 32.8541;
+  driveSessionData = [];
+  for (let i = 0; i < 40; i++) {
+    let lat = baseLat + (i * 0.00012);
+    let lon = baseLon + (Math.sin(i * 0.5) * 0.00008);
+    let speed = Math.round(40 + Math.sin(i) * 15);
+    let mockG = i % 7 === 0 ? 0.74 : (i % 4 === 0 ? 0.28 : 0.02);
+    driveSessionData.push({ lat, lon, speed, gForce: mockG, timestamp: Date.now() });
+    
+    sessionTotalG += mockG;
+    sessionCount++;
+    if (mockG > sessionMaxG) sessionMaxG = mockG;
+  }
+  document.getElementById('ride-peak-label').textContent = `Tepe Noktası: ${sessionMaxG.toFixed(2)} G`;
+  updateNativeSVGMap();
+  calculateTotalDistanceUI();
+}
+
+function restartApp() {
+  currentAppFlowState = 'ready';
+  if (playbackTimer) clearInterval(playbackTimer);
+  if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+  if (durationTimer) { clearInterval(durationTimer); durationTimer = null; }
+  
+  document.getElementById('ride-feedback').style.display = 'none';
+  document.getElementById('panel-label').textContent = 'Anlık Telemetri';
+  document.getElementById('speed-label-type').textContent = 'Mevcut Hız';
+  document.getElementById('metric-speed').style.color = 'var(--accent2)';
+  document.getElementById('metric-speed').textContent = '0 km/s';
+  document.getElementById('ride-badge').textContent = 'Hazır';
+  document.getElementById('ride-badge').className = 'card-badge badge-warn';
+  
+  document.getElementById('svg-polyline').setAttribute('points', '');
+  document.getElementById('svg-marker').style.display = 'none';
+
+  const mainBtn = document.getElementById('btn-ride-toggle');
+  mainBtn.textContent = 'Sürüşü Başlat';
+  mainBtn.className = 'ride-btn btn-start';
+
+  document.getElementById('ride-peak-label').textContent = `Tepe Noktası: 0.00 G`;
+  document.getElementById('ride-value').textContent = '0.00';
+  document.getElementById('metric-distance').textContent = '0 m';
+  document.getElementById('metric-duration').textContent = '00:00:00';
+}
+</script>
+</body>
+</html>
