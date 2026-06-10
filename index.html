@@ -3,22 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Bumpy Ride — v7.5 GitHub Kararlı</title>
+<title>Bumpy Ride — v7.6 GitHub Kararlı</title>
 
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
-<style>
-  /* LEAFLET ÇEKİRDEK TASARIMI */
-  .leaflet-pane,.leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow,.leaflet-tile-container,.leaflet-pane>svg,.leaflet-pane>canvas,.leaflet-zoom-box,.leaflet-image-layer,.leaflet-layer{position:absolute;left:0;top:0}
-  .leaflet-container{overflow:hidden;-ms-touch-action:none;touch-action:none;cursor:grab;background:#13131f;font:12px/1.5 sans-serif}
-  .leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow{-webkit-user-select:none;-moz-user-select:none;user-select:none;-webkit-user-drag:none}
-  .leaflet-zoom-box{width:0;height:0;box-sizing:border-box;z-index:800}
-  .leaflet-overlay-pane{z-index:400}
-  .leaflet-tile-pane{z-index:200}
-  .leaflet-shadow-pane{z-index:500}
-  .leaflet-marker-pane{z-index:600}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
+<style>
   :root {
     --bg: #0a0a0f;
     --surface: #12121a;
@@ -80,8 +73,8 @@
 
   .feedback-box { background: rgba(124,106,247,0.06); border: 1px solid rgba(124,106,247,0.2); border-radius: var(--radius-sm); padding: 14px; margin: 16px 0; display: none; }
 
-  .ride-btn-group { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 16px; position: relative; z-index: 10; }
-  .ride-btn { padding: 16px; border: none; border-radius: var(--radius-sm); font-weight: 600; font-size: 15px; cursor: pointer; text-align: center; width: 100%; display: block; }
+  .ride-btn-group { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 16px; }
+  .ride-btn { padding: 16px; border: none; border-radius: var(--radius-sm); font-weight: 600; font-size: 15px; cursor: pointer; text-align: center; width: 100%; display: block; -webkit-appearance: none; }
   .btn-start { background: var(--accent2); color: #0a0a0f; }
   .btn-stop { background: var(--danger); color: #fff; }
   .btn-play { background: #7c6af7; color: #fff; }
@@ -92,7 +85,7 @@
 <div class="app">
   <div class="header">
     <div class="logo">Bumpy Ride Telemetry</div>
-    <div class="title">Sürüş Analitiği v7.5</div>
+    <div class="title">Sürüş Analitiği v7.6</div>
   </div>
 
   <div class="maintenance-box">
@@ -164,10 +157,70 @@
     </div>
 
     <div class="ride-btn-group">
-      <button class="ride-btn btn-start" id="btn-ride-toggle">Sürüşi Başlat</button>
+      <button class="ride-btn btn-start" id="btn-ride-toggle">Sürüşü Başlat</button>
     </div>
   </div>
 </div>
 
 <script>
-!function(t,e){"object"==typeof exports&&"undefined"!=typeof module?e(exports):"function"==typeof define&&define.amd?define(["exports"],e):e((t="undefined"!=typeof globalThis?globalThis:t||self).L={})}(this,(function(t){"use strict";function e(t){var e,i,n,s;for(i=1,n=arguments
+let currentAppFlowState = 'ready'; 
+let driveSessionData = [];
+let watchId = null;
+let rideStartTime = null;
+let durationTimer = null;
+let currentSpeedKmh = 0;
+let sessionMaxG = 0;
+let totalDrivenMetersThisSession = 0;
+
+let map = null; 
+let livePolyline = null;
+let playbackIdx = 0; 
+let playbackTimer = null;
+
+// Hata yönetimli harita ve arayüz başlatıcı
+window.addEventListener('load', () => {
+  loadMaintenanceConfig();
+  scanNearbyTrafficRadar(39.9208, 32.8541);
+  
+  // Haritayı HTTPS uyumlu CartoDB alt yapısıyla ayağa kaldırıyoruz
+  try {
+    if (typeof L !== 'undefined' && L.map) {
+      map = L.map('map', { zoomControl: false, attributionControl: false }).setView([39.9208, 32.8541], 13);
+      
+      // Güvenli SSL şemalı karanlık mod harita karoları
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        maxZoom: 20
+      }).addTo(map);
+
+      livePolyline = L.polyline([], { color: '#7c6af7', weight: 5 }).addTo(map);
+      console.log("Leaflet ve CartoDB başarıyla yüklendi.");
+    } else {
+      setupFallbackMapUI();
+    }
+  } catch(e) {
+    console.error("Harita başlatma hatası, fallback devreye alınıyor:", e);
+    setupFallbackMapUI();
+  }
+
+  // Sensör akışını başlat
+  try { 
+    window.addEventListener('devicemotion', calculateMotionStream, true); 
+  } catch(e) {}
+  
+  // Buton dinleyicisini kesin olarak bağlıyoruz
+  const actionBtn = document.getElementById('btn-ride-toggle');
+  if (actionBtn) {
+    actionBtn.onclick = handleMainButtonClick;
+  }
+});
+
+function setupFallbackMapUI() {
+  const mapDiv = document.getElementById('map');
+  if (mapDiv) {
+    mapDiv.innerHTML = "<div style='display:flex; justify-content:center; align-items:center; height:100%; font-family:monospace; color:#3dd6ac; font-size:11px; text-align:center; padding:10px;'>📡 GPS BAĞLANTISI HAZIR<br>Sürüş Başladığında Konum Çizilecektir</div>";
+  }
+}
+
+function loadMaintenanceConfig() {
+  if (localStorage.getItem('current_car_km')) document.getElementById('input-current-km').value = localStorage.getItem('current_car_km');
+  if (localStorage.getItem('next_maint-km')) document.getElementById('input-next-maint-km').value = localStorage.getItem('next
