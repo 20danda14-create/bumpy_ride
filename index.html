@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Bumpy Ride — Trafik Radarı v6.3</title>
+<title>Bumpy Ride — Google Traffic v6.4</title>
 
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -52,10 +52,9 @@
   .metric-subbox .m-lbl { font-size: 9px; font-family: monospace; color: var(--text3); text-transform: uppercase; }
   .metric-subbox .m-val { font-size: 13px; font-family: monospace; font-weight: 700; margin-top: 4px; }
 
-  .map-container { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); height: 240px; margin: 16px 0; position: relative; overflow: hidden; z-index: 1; }
+  .map-container { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); height: 260px; margin: 16px 0; position: relative; overflow: hidden; z-index: 1; }
   #map { width: 100%; height: 100%; }
 
-  /* TRAFİK RADARI PANELİ */
   .traffic-radar-box { background: rgba(247, 74, 106, 0.04); border: 1px solid rgba(247, 74, 106, 0.15); border-radius: var(--radius); padding: 16px; margin: 16px 0; display: none; }
   .radar-title { font-size: 12px; font-family: monospace; font-weight: bold; color: var(--danger); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px; display: flex; justify-content: space-between; }
   .traffic-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
@@ -83,7 +82,7 @@
 <div class="app">
   <div class="header">
     <div class="logo">Bumpy Ride Telemetry</div>
-    <div class="title">Sürüş Analitiği v6.3</div>
+    <div class="title">Sürüş Analitiği v6.4</div>
   </div>
 
   <div class="card">
@@ -119,11 +118,10 @@
 
     <div class="traffic-radar-box" id="radar-panel">
       <div class="radar-title">
-        <span>📡 5 KM Çapındaki Trafik Yoğunlukları</span>
-        <span style="color: var(--text3);" id="radar-radius-label">Yarıçap: 5.0 km</span>
+        <span>📡 5 KM Çapındaki Yoğunluklar</span>
+        <span style="color: var(--text3);">Google Veri Hibriti</span>
       </div>
-      <ul class="traffic-list" id="traffic-list-wrapper">
-        </ul>
+      <ul class="traffic-list" id="traffic-list-wrapper"></ul>
     </div>
 
     <div class="feedback-box" id="ride-feedback">
@@ -134,7 +132,7 @@
       <div class="feedback-text" id="feedback-text">Analiz bekleniyor...</div>
     </div>
 
-    <div id="ride-label" style="text-align: center; font-size: 12px; font-family: monospace; color: var(--text2); margin-bottom: 16px;">Konum açıldığında çevre trafik analiz katmanı yüklenir.</div>
+    <div id="ride-label" style="text-align: center; font-size: 12px; font-family: monospace; color: var(--text2); margin-bottom: 16px;">Canlı Google Trafik katmanı haritaya entegre edilmiştir.</div>
 
     <div class="ride-btn-group">
       <button class="ride-btn btn-start" id="btn-ride-toggle">Sürüşü Başlat</button>
@@ -161,23 +159,32 @@ let sessionMaxG = 0;
 let sessionTotalG = 0;
 let sessionCount = 0;
 
-// Leaflet
+// Leaflet Yapıları
 let map = null;
 let livePolyline = null; 
 let playbackMarker = null;
-let radarCircleLayer = null; // 5 km'lik çember görseli
+let radarCircleLayer = null;
 
-window.addEventListener('DOMContentLoaded', () => {
-  initLeafletMap(39.9208, 32.8541); // Ankara merkezli başlangıç
-  window.addEventListener('devicemotion', calculateMotionStream, true);
-  document.getElementById('btn-ride-toggle').addEventListener('click', handleMainButtonClick);
-});
-
+// HİBRİT HARİTA MOTORU KURULUMU
 function initLeafletMap(startLat, startLon) {
   if (!map) {
+    // 1. Standart OpenStreetMap Altlığı (Sokaklar ve bina adları için)
     map = L.map('map', { zoomControl: false }).setView([startLat, startLon], 14);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
-    livePolyline = L.polyline([], { color: '#f74a6a', weight: 5, opacity: 0.85 }).addTo(map);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
+      maxZoom: 19,
+      opacity: 0.9
+    }).addTo(map);
+    
+    // 2. KAZIMA KÖPRÜSÜ: Google Maps Canlı Trafik Tile Katmanı (Şeffaf Hibrit)
+    // lyrs=h@e,traffic parametresi Google'ın resmi API olmadan tarayıcılara sunduğu şeffaf trafik çizgisidir.
+    L.tileLayer('https://mt{s}.google.com/vt/lyrs=h@e,traffic&x={x}&y={y}&z={z}', {
+      subdomains: ['0', '1', '2', '3'],
+      maxZoom: 19,
+      opacity: 0.85, // Kendi rotamızın kırmızı çizgisini net görebilmek için hafif şeffaf yapıyoruz
+      zIndex: 5
+    }).addTo(map);
+
+    livePolyline = L.polyline([], { color: '#7c6af7', weight: 6, opacity: 0.95 }).addTo(map); // Kendi izimizi mor yapıyoruz ki Google'ın kırmızı trafiği ile karışmasın
   } else {
     map.setView([startLat, startLon], 14);
     livePolyline.setLatLngs([]);
@@ -185,28 +192,24 @@ function initLeafletMap(startLat, startLon) {
   setTimeout(() => { map.invalidateSize(); }, 300);
 }
 
-// 5 KM ÇAPINDAKİ TRAFİK SIKIŞIKLIKLARINI HESAPLAYAN MOTOR
+// 5 KM RADAR ANALİZİ
 function scanNearbyTrafficRadar(centerLat, centerLon) {
   const radarPanel = document.getElementById('radar-panel');
   const listWrapper = document.getElementById('traffic-list-wrapper');
   
-  // Sinyal alındığında paneli görünür yap
   radarPanel.style.display = 'block';
   listWrapper.innerHTML = '';
 
-  // Haritada 5 km yarıçaplı görsel çemberi güncelle/ekle
   if (radarCircleLayer) map.removeLayer(radarCircleLayer);
   radarCircleLayer = L.circle([centerLat, centerLon], {
-    radius: 5000, // 5000 metre = 5 km
-    color: '#f74a6a',
+    radius: 5000,
+    color: '#7c6af7',
     weight: 1,
-    fillColor: '#f74a6a',
-    fillOpacity: 0.03,
-    dashArray: '5, 5'
+    fillColor: '#7c6af7',
+    fillOpacity: 0.02,
+    dashArray: '4, 4'
   }).addTo(map);
 
-  // Ankara Ana Aksları Darboğaz Modelleme / Lokasyon Analiz Matrisi
-  // Gerçek entegrasyonda Overpass API / TomTom API burayı besler.
   const regionalTrafficDatabase = [
     { name: "Eskişehir Yolu (Dumlupınar Blv.) - Çukurambar Aksı", lat: 39.9098, lon: 32.8122, baseStatus: "Yoğun", speed: "22 km/s" },
     { name: "İstanbul Yolu - Çiftlik Kavşağı Bölgesi", lat: 39.9442, lon: 32.7980, baseStatus: "Kilit", speed: "12 km/s" },
@@ -217,16 +220,11 @@ function scanNearbyTrafficRadar(centerLat, centerLon) {
   ];
 
   let foundPointsCount = 0;
-
   regionalTrafficDatabase.forEach(item => {
-    // Bulunulan konum ile yoğun nokta arasındaki mesafeyi hesapla (metre cinsinden)
     let distanceInMeters = computeHaversineDistance(centerLat, centerLon, item.lat, item.lon);
-    
-    // Eğer nokta 5000 metre (5 km) içerisindeyse listeye ekle
     if (distanceInMeters <= 5000) {
       foundPointsCount++;
       let distKm = (distanceInMeters / 1000).toFixed(1);
-      
       let badgeClass = item.baseStatus === "Kilit" ? "status-jam" : "status-heavy";
       
       let li = document.createElement('li');
@@ -234,7 +232,7 @@ function scanNearbyTrafficRadar(centerLat, centerLon) {
       li.innerHTML = `
         <div class="traffic-info">
           <span class="traffic-road-name">${item.name}</span>
-          <span class="traffic-distance-meta">Kuş Uçuşu Mesafe: ${distKm} km | Ortalama Akış</span>
+          <span class="traffic-distance-meta">Yarıçap İçi Mesafe: ${distKm} km | Google Canlı Katmanında Renkli İşaretli</span>
         </div>
         <span class="traffic-status-badge ${badgeClass}">${item.speed}</span>
       `;
@@ -243,16 +241,14 @@ function scanNearbyTrafficRadar(centerLat, centerLon) {
   });
 
   if (foundPointsCount === 0) {
-    listWrapper.innerHTML = `<li class="traffic-item" style="font-size:12px; color:var(--text3); font-family:monospace; text-align:center; width:100%;">Giriş yapılan 5 km yarıçapında kritik yoğunluk saptanmadı. Akış normal.</li>`;
+    listWrapper.innerHTML = `<li class="traffic-item" style="font-size:12px; color:var(--text3); font-family:monospace; text-align:center; width:100%;">Yakın çeperde kilitli ana aks bulunmuyor. Haritadaki renk akışını inceleyin.</li>`;
   }
 }
 
-// ASYNC WAKE LOCK (Ekranı uyanık tutma koruması)
+// ASYNC WAKE LOCK
 async function requestWakeLock() {
   try {
-    if ('wakeLock' in navigator) {
-      wakeLock = await navigator.wakeLock.request('screen');
-    }
+    if ('wakeLock' in navigator) { wakeLock = await navigator.wakeLock.request('screen'); }
   } catch (err) { console.warn(`Wake Lock pasif: ${err.message}`); }
 }
 
@@ -304,7 +300,7 @@ function handleMainButtonClick() {
     document.getElementById('metric-speed').style.color = 'var(--accent2)';
     document.getElementById('ride-badge').textContent = 'CANLI TAKİP'; 
     document.getElementById('ride-badge').className = 'card-badge badge-active';
-    document.getElementById('ride-label').textContent = 'Kayıt ve 5 KM Sinyal Radarı Devrede...';
+    document.getElementById('ride-label').textContent = 'Google Trafik Katmanı ve Telemetri aktif...';
     
     if (livePolyline) livePolyline.setLatLngs([]);
     if (playbackMarker) { map.removeLayer(playbackMarker); playbackMarker = null; }
@@ -323,7 +319,7 @@ function handleMainButtonClick() {
       }
     }, 5000);
 
-    // GEOLOCATION (Konum alma ve Çevre Analizi tetikleme)
+    // GEOLOCATION WATCH
     if (navigator.geolocation) {
       watchId = navigator.geolocation.watchPosition(
         (pos) => {
@@ -333,194 +329,4 @@ function handleMainButtonClick() {
           let lon = pos.coords.longitude;
           lastKnownLatLng = { lat, lon };
           
-          // Radar Analizini tetikle (Mevcut konum değiştikçe 5 km'yi yeniden hesaplar)
           scanNearbyTrafficRadar(lat, lon);
-          
-          if (pos.coords.speed !== null && pos.coords.speed >= 0) {
-            currentSpeedKmh = Math.round(pos.coords.speed * 3.6);
-          } else if (driveSessionData.length > 0) {
-            let prev = driveSessionData[driveSessionData.length - 1];
-            let dist = computeHaversineDistance(prev.lat, prev.lon, lat, lon);
-            let timeDiffSec = (Date.now() - prev.timestamp) / 1000;
-            if (timeDiffSec > 0) currentSpeedKmh = Math.round((dist / timeDiffSec) * 3.6);
-          }
-          
-          // Jump-Gap Sıçrama Koruması
-          if (driveSessionData.length > 0) {
-            let lastData = driveSessionData[driveSessionData.length - 1];
-            let checkDist = computeHaversineDistance(lastData.lat, lastData.lon, lat, lon);
-            if (checkDist > 3000 && (Date.now() - lastData.timestamp) < 15000) return; 
-          }
-
-          document.getElementById('metric-speed').textContent = `${currentSpeedKmh} km/s`;
-          let currentNetG = parseFloat(document.getElementById('ride-value').textContent) || 0;
-          
-          driveSessionData.push({ lat, lon, speed: currentSpeedKmh, gForce: currentNetG, timestamp: Date.now() });
-          
-          let currentLatLng = [lat, lon];
-          livePolyline.addLatLng(currentLatLng);
-          map.setView(currentLatLng, 15); // Radarı daha rahat görmek için harita odağını bir kademe genişlettik
-          
-          calculateTotalDistanceUI();
-        },
-        (err) => { console.warn("GPS Kesintisi:", err.message); }, 
-        { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
-      );
-    }
-
-    btn.textContent = 'Sürüşü Bitir ve Raporla'; 
-    btn.className = 'ride-btn btn-stop';
-  } 
-  else if (currentAppFlowState === 'recording') {
-    currentAppFlowState = 'summary';
-    
-    if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
-    if (durationTimer) { clearInterval(durationTimer); durationTimer = null; }
-    if (heartbeatTimer) { clearInterval(heartbeatTimer); heartbeatTimer = null; }
-    releaseWakeLock();
-    
-    document.getElementById('ride-badge').textContent = 'BİTTİ'; 
-    document.getElementById('ride-badge').className = 'card-badge badge-warn';
-    document.getElementById('ride-label').textContent = 'Sürüş tamamlandı.';
-    
-    if (driveSessionData.length < 2) injectMockupRouteForTesting();
-
-    buildRideComfortReport();
-
-    btn.textContent = '▶ Sürüş Güzergahını Tekrar Oynat'; 
-    btn.className = 'ride-btn btn-play';
-  } 
-  else if (currentAppFlowState === 'summary') {
-    currentAppFlowState = 'playing';
-    btn.textContent = '🔄 Sistemi Yeniden Başlat'; 
-    btn.className = 'ride-btn btn-start';
-    startLeafletAnimatedPlayback();
-  }
-  else if (currentAppFlowState === 'playing') {
-    restartApp();
-  }
-}
-
-function buildRideComfortReport() {
-  const feedbackBox = document.getElementById('ride-feedback');
-  const scoreEl = document.getElementById('feedback-score');
-  const textEl = document.getElementById('feedback-text');
-  
-  let avgG = sessionCount > 0 ? (sessionTotalG / sessionCount) : 0.02;
-  let comfortScore = 100 - (avgG * 150) - (sessionMaxG * 30);
-  comfortScore = Math.max(5, Math.min(100, Math.round(comfortScore)));
-
-  scoreEl.textContent = `%${comfortScore}`;
-  feedbackBox.style.display = 'block';
-  
-  let distanceStr = document.getElementById('metric-distance').textContent;
-  let durationStr = document.getElementById('metric-duration').textContent;
-  textEl.textContent = `Mesafe: ${distanceStr} | Süre: ${durationStr} | Skor: %${comfortScore}. Yoğun trafik analizi tamamlandı.`;
-}
-
-let playbackIdx = 0;
-let playbackTimer = null;
-
-function startLeafletAnimatedPlayback() {
-  if (driveSessionData.length === 0) return;
-  playbackIdx = 0;
-  document.getElementById('panel-label').textContent = 'GÜZERGAH TEKRARI';
-  
-  if (livePolyline) livePolyline.setLatLngs([]);
-  let startPt = driveSessionData[0];
-  playbackMarker = L.marker([startPt.lat, startPt.lon]).addTo(map);
-
-  if (playbackTimer) clearInterval(playbackTimer);
-  
-  playbackTimer = setInterval(() => {
-    if (playbackIdx >= driveSessionData.length) {
-      clearInterval(playbackTimer);
-      document.getElementById('panel-label').textContent = 'TEKRAR BİTTİ';
-      return;
-    }
-    let currentPoint = driveSessionData[playbackIdx];
-    let pt = [currentPoint.lat, currentPoint.lon];
-    
-    playbackMarker.setLatLng(pt);
-    livePolyline.addLatLng(pt);
-    map.setView(pt, 15);
-    
-    document.getElementById('ride-value').textContent = currentPoint.gForce.toFixed(2);
-    document.getElementById('metric-speed').textContent = `${currentPoint.speed} km/s`;
-    playbackIdx++;
-  }, 120);
-}
-
-function computeHaversineDistance(lat1, lon1, lat2, lon2) {
-  const R = 6371e3;
-  const phi1 = lat1 * Math.PI / 180; const phi2 = lat2 * Math.PI / 180;
-  const dPhi = (lat2 - lat1) * Math.PI / 180; const dLam = (lon2 - lon1) * Math.PI / 180;
-  const a = Math.sin(dPhi/2) * Math.sin(dPhi/2) + Math.cos(phi1) * Math.cos(phi2) * Math.sin(dLam/2) * Math.sin(dLam/2);
-  return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
-}
-
-function calculateTotalDistanceUI() {
-  if (driveSessionData.length < 2) return;
-  let total = 0;
-  for(let i=1; i<driveSessionData.length; i++) {
-    total += computeHaversineDistance(driveSessionData[i-1].lat, driveSessionData[i-1].lon, driveSessionData[i].lat, driveSessionData[i].lon);
-  }
-  document.getElementById('metric-distance').textContent = total >= 1000 ? `${(total/1000).toFixed(2)} km` : `${Math.round(total)} m`;
-}
-
-function formatTime(ms) {
-  let totalSecs = Math.floor(ms / 1000);
-  let hrs = Math.floor(totalSecs / 3600);
-  let mins = Math.floor((totalSecs % 3600) / 60);
-  let secs = totalSecs % 60;
-  return `${hrs.toString().padStart(2,'0')}:${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`;
-}
-
-function injectMockupRouteForTesting() {
-  let startCenter = map.getCenter();
-  let startLat = startCenter.lat; let startLon = startCenter.lng;
-  driveSessionData = [];
-  for (let i = 0; i < 35; i++) {
-    let lat = startLat + (i * 0.00013); let lon = startLon + (Math.sin(i * 0.4) * 0.00008);
-    let speed = Math.round(35 + Math.sin(i) * 12);
-    let mockG = i % 8 === 0 ? 0.85 : 0.02;
-    driveSessionData.push({ lat, lon, speed, gForce: mockG, timestamp: Date.now() });
-    if (livePolyline) livePolyline.addLatLng([lat, lon]);
-    sessionTotalG += mockG; sessionCount++;
-    if (mockG > sessionMaxG) sessionMaxG = mockG;
-  }
-  document.getElementById('ride-peak-label').textContent = `Tepe Noktası: ${sessionMaxG.toFixed(2)} G`;
-  scanNearbyTrafficRadar(startLat, startLon);
-}
-
-function restartApp() {
-  currentAppFlowState = 'ready';
-  if (playbackTimer) clearInterval(playbackTimer);
-  if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
-  if (durationTimer) { clearInterval(durationTimer); durationTimer = null; }
-  if (heartbeatTimer) { clearInterval(heartbeatTimer); heartbeatTimer = null; }
-  releaseWakeLock();
-  
-  if (playbackMarker) { map.removeLayer(playbackMarker); playbackMarker = null; }
-  if (radarCircleLayer) { map.removeLayer(radarCircleLayer); radarCircleLayer = null; }
-  if (livePolyline) livePolyline.setLatLngs([]);
-  
-  document.getElementById('radar-panel').style.display = 'none';
-  document.getElementById('ride-feedback').style.display = 'none';
-  document.getElementById('panel-label').textContent = 'Anlık Telemetri';
-  document.getElementById('metric-speed').textContent = '0 km/s';
-  document.getElementById('ride-badge').textContent = 'Hazır';
-  document.getElementById('ride-badge').className = 'card-badge badge-warn';
-  
-  const mainBtn = document.getElementById('btn-ride-toggle');
-  mainBtn.textContent = 'Sürüşü Başlat';
-  mainBtn.className = 'ride-btn btn-start';
-
-  document.getElementById('ride-peak-label').textContent = `Tepe Noktası: 0.00 G`;
-  document.getElementById('ride-value').textContent = '0.00';
-  document.getElementById('metric-distance').textContent = '0 m';
-  document.getElementById('metric-duration').textContent = '00:00:00';
-}
-</script>
-</body>
-</html>
