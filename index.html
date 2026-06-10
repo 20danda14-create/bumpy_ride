@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Bumpy Ride — v7.4 GitHub Kararlı Sürüm</title>
+<title>Bumpy Ride — v7.5 GitHub Kararlı</title>
 
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -80,8 +80,8 @@
 
   .feedback-box { background: rgba(124,106,247,0.06); border: 1px solid rgba(124,106,247,0.2); border-radius: var(--radius-sm); padding: 14px; margin: 16px 0; display: none; }
 
-  .ride-btn-group { display: grid; grid-template-columns: 1fr; gap: 10px; }
-  .ride-btn { padding: 16px; border: none; border-radius: var(--radius-sm); font-weight: 600; font-size: 15px; cursor: pointer; text-align: center; }
+  .ride-btn-group { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 16px; position: relative; z-index: 10; }
+  .ride-btn { padding: 16px; border: none; border-radius: var(--radius-sm); font-weight: 600; font-size: 15px; cursor: pointer; text-align: center; width: 100%; display: block; }
   .btn-start { background: var(--accent2); color: #0a0a0f; }
   .btn-stop { background: var(--danger); color: #fff; }
   .btn-play { background: #7c6af7; color: #fff; }
@@ -92,7 +92,7 @@
 <div class="app">
   <div class="header">
     <div class="logo">Bumpy Ride Telemetry</div>
-    <div class="title">Sürüş Analitiği v7.4</div>
+    <div class="title">Sürüş Analitiği v7.5</div>
   </div>
 
   <div class="maintenance-box">
@@ -156,4 +156,18 @@
     </div>
 
     <div class="feedback-box" id="ride-feedback">
-      <div style="display:flex; justify-content:
+      <div style="display:flex; justify-content:space-between; font-weight:bold; color:var(--accent2); margin-bottom:4px;">
+        <span>📋 Sürüş Konfor Raporu</span>
+        <span id="feedback-score" style="color:var(--accent3)">Skor: --</span>
+      </div>
+      <div class="feedback-text" id="feedback-text" style="font-size:12px; font-family:monospace;"></div>
+    </div>
+
+    <div class="ride-btn-group">
+      <button class="ride-btn btn-start" id="btn-ride-toggle">Sürüşi Başlat</button>
+    </div>
+  </div>
+</div>
+
+<script>
+!function(t,e){"object"==typeof exports&&"undefined"!=typeof module?e(exports):"function"==typeof define&&define.amd?define(["exports"],e):e((t="undefined"!=typeof globalThis?globalThis:t||self).L={})}(this,(function(t){"use strict";function e(t){var e,i,n,s;for(i=1,n=arguments
