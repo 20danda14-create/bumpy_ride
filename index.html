@@ -3,308 +3,60 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Bumpy Ride — v8.1 Orijinal Güvenli Sürüm</title>
-
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Bumpy Ride — v8.2 Standart Harita Sürümü</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <style>
   :root {
-    --bg: #0a0a0f;
-    --surface: #12121a;
-    --surface2: #1a1a26;
-    --border: rgba(255,255,255,0.08);
-    --accent: #7c6af7;
-    --accent2: #3dd6ac;
-    --accent3: #f7a26a;
-    --text: #f0eeff;
-    --text2: rgba(240,238,255,0.55);
-    --text3: rgba(240,238,255,0.3);
-    --danger: #f74a6a;
-    --radius: 16px;
-    --radius-sm: 8px;
+    --bg: #0a0a0f; --surface: #12121a; --surface2: #1a1a26;
+    --border: rgba(255,255,255,0.08); --accent: #7c6af7;
+    --accent2: #3dd6ac; --accent3: #f7a26a; --text: #f0eeff;
+    --text2: rgba(240,238,255,0.55); --text3: rgba(240,238,255,0.3);
+    --danger: #f74a6a; --radius: 16px; --radius-sm: 8px;
   }
-
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, sans-serif; min-height: 100vh; }
-
+  body { background: var(--bg); color: var(--text); font-family: sans-serif; min-height: 100vh; }
   .app { max-width: 520px; margin: 0 auto; padding: 20px 16px; }
-  .header { text-align: center; margin-bottom: 16px; }
-  .logo { font-size: 11px; font-family: monospace; letter-spacing: 0.3em; color: var(--accent); text-transform: uppercase; }
-  .title { font-size: 26px; font-weight: 800; }
-
   .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; }
-  .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-  .card-label { font-size: 11px; font-family: monospace; color: var(--text3); text-transform: uppercase; }
-  .card-badge { font-size: 10px; font-family: monospace; padding: 3px 8px; border-radius: 4px; border: 1px solid; }
-  .badge-active { color: var(--accent2); border-color: rgba(61,214,172,0.3); background: rgba(61,214,172,0.08); }
-  .badge-warn { color: var(--accent3); border-color: rgba(247,162,106,0.3); background: rgba(247,162,106,0.08); }
-
-  .db-value { font-size: 54px; font-family: monospace; font-weight: 700; line-height: 1; }
-  
-  .metrics-row-triple { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin: 16px 0; }
-  .metric-subbox { background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 4px; text-align: center; }
-  .metric-subbox .m-lbl { font-size: 9px; font-family: monospace; color: var(--text3); text-transform: uppercase; }
-  .metric-subbox .m-val { font-size: 13px; font-family: monospace; font-weight: 700; margin-top: 4px; }
-
-  .maintenance-box { background: linear-gradient(135deg, rgba(124,106,247,0.03), rgba(255,255,255,0.01)); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; }
-  .maint-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
-  .maint-input-group { display: flex; flex-direction: column; gap: 4px; }
-  .maint-input-group label { font-size: 10px; font-family: monospace; color: var(--text2); text-transform: uppercase; }
-  .maint-input-group input { background: var(--surface2); border: 1px solid var(--border); color: #fff; padding: 8px; border-radius: var(--radius-sm); font-family: monospace; font-size: 14px; text-align: center; }
-  .maint-status-bar { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--border); display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
-
-  .alert-popup-box { background: rgba(247, 74, 106, 0.1); border: 1px solid var(--danger); border-radius: var(--radius-sm); padding: 12px; margin: 12px 0; display: none; text-align: center; }
-  
-  .map-container { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); height: 210px; margin: 16px 0; position: relative; overflow: hidden; z-index: 1; }
-  #map { width: 100%; height: 100%; background: #13131f; }
-
-  .traffic-radar-box { background: rgba(247, 74, 106, 0.04); border: 1px solid rgba(247, 74, 106, 0.15); border-radius: var(--radius); padding: 16px; margin: 16px 0; }
-  .radar-title { font-size: 12px; font-family: monospace; font-weight: bold; color: var(--danger); text-transform: uppercase; display: flex; justify-content: space-between; margin-bottom: 10px; }
-  .traffic-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
-  .traffic-item { background: rgba(255,255,255,0.02); border: 1px solid var(--border); padding: 10px; border-radius: var(--radius-sm); display: flex; justify-content: space-between; align-items: center; }
-  .traffic-road-name { font-size: 12px; font-weight: bold; color: var(--text); }
-  .traffic-status-badge { font-size: 10px; font-family: monospace; font-weight: bold; padding: 2px 6px; border-radius: 4px; }
-  .status-heavy { background: rgba(247, 74, 106, 0.15); color: var(--danger); border: 1px solid rgba(247, 74, 106, 0.3); }
-  .status-jam { background: #f74a6a; color: #0a0a0f; }
-
-  .feedback-box { background: rgba(124,106,247,0.06); border: 1px solid rgba(124,106,247,0.2); border-radius: var(--radius-sm); padding: 14px; margin: 16px 0; display: none; }
-
-  .ride-btn-group { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 16px; }
-  .ride-btn { padding: 16px; border: none; border-radius: var(--radius-sm); font-weight: 600; font-size: 15px; cursor: pointer; text-align: center; width: 100%; display: block; }
+  .map-container { background: #eee; border-radius: var(--radius); height: 210px; margin: 16px 0; overflow: hidden; position: relative; }
+  #map { width: 100%; height: 100%; }
+  .ride-btn { padding: 16px; border: none; border-radius: 8px; font-weight: 600; width: 100%; cursor: pointer; }
   .btn-start { background: var(--accent2); color: #0a0a0f; }
   .btn-stop { background: var(--danger); color: #fff; }
-  .btn-play { background: #7c6af7; color: #fff; }
 </style>
 </head>
 <body>
-
 <div class="app">
-  <div class="header">
-    <div class="logo">Bumpy Ride Telemetry</div>
-    <div class="title">Sürüş Analitiği v8.1</div>
-  </div>
-
-  <div class="maintenance-box">
-    <div class="card-label">🛠️ ARAÇ BAKIM VE ODOMETRE ASİSTANI</div>
-    <div class="maint-inputs">
-      <div class="maint-input-group">
-        <label>Mevcut Araç Km</label>
-        <input type="number" id="input-current-km" value="125000" onchange="saveMaintenanceData()">
-      </div>
-      <div class="maint-input-group">
-        <label>Sonraki Bakım Km</label>
-        <input type="number" id="input-next-maint-km" value="135000" onchange="saveMaintenanceData()">
-      </div>
-    </div>
-    <div class="maint-status-bar">
-      <span style="color: var(--text2);">Bakıma Kalan Mesafe:</span>
-      <span id="label-remaining-km" style="font-family: monospace; font-weight: bold; color: var(--accent2); font-size: 14px;">-- km</span>
-    </div>
-  </div>
-
-  <div class="alert-popup-box" id="maintenance-alert-zone">
-    <h4 style="color:var(--danger)">🚨 BAKIM ZAMANI GELDİ!</h4>
-    <p id="alert-desc" style="font-size:12px; margin-top:4px;"></p>
-  </div>
-
   <div class="card">
-    <div class="card-header">
-      <div class="card-label" id="panel-label">Anlık Telemetri</div>
-      <div class="card-badge badge-warn" id="ride-badge">Hazır</div>
-    </div>
-    
-    <div style="display: flex; justify-content: space-between; align-items: baseline;">
-      <div class="db-value" id="ride-value">0.00</div>
-      <div style="font-size: 11px; color: var(--text3); font-family: monospace" id="ride-peak-label">Tepe Noktası: 0.00 G</div>
-    </div>
-    
-    <div class="metrics-row-triple">
-      <div class="metric-subbox">
-        <div class="m-lbl">Sürüş Mesafesi</div>
-        <div class="m-val" id="metric-distance">0 m</div>
-      </div>
-      <div class="metric-subbox">
-        <div class="m-lbl">Mevcut Hız</div>
-        <div class="m-val" id="metric-speed" style="color: var(--accent2);">0 km/s</div>
-      </div>
-      <div class="metric-subbox">
-        <div class="m-lbl">Sürüş Süresi</div>
-        <div class="m-val" id="metric-duration">00:00:00</div>
-      </div>
-    </div>
-
+    <div id="ride-badge">Hazır</div>
     <div class="map-container">
       <div id="map"></div>
     </div>
-
-    <div class="traffic-radar-box" id="radar-panel">
-      <div class="radar-title">
-        <span>📡 ANKARA AKTİF RADAR (5 KM YARIÇAP)</span>
-      </div>
-      <ul class="traffic-list" id="traffic-list-wrapper"></ul>
-    </div>
-
-    <div class="feedback-box" id="ride-feedback">
-      <div style="display:flex; justify-content:space-between; font-weight:bold; color:var(--accent2); margin-bottom:4px;">
-        <span>📋 Sürüş Konfor Raporu</span>
-        <span id="feedback-score" style="color:var(--accent3)">Skor: --</span>
-      </div>
-      <div class="feedback-text" id="feedback-text" style="font-size:12px; font-family:monospace;"></div>
-    </div>
-
-    <div class="ride-btn-group">
-      <button class="ride-btn btn-start" id="btn-ride-toggle">Sürüşü Başlat</button>
-    </div>
+    <button class="ride-btn btn-start" id="btn-ride-toggle">Sürüşü Başlat</button>
   </div>
 </div>
 
 <script>
-let currentAppFlowState = 'ready'; 
-let driveSessionData = [];
-let watchId = null;
-let rideStartTime = null;
-let durationTimer = null;
-let currentSpeedKmh = 0;
-let sessionMaxG = 0;
-let totalDrivenMetersThisSession = 0;
-
-let map = null; 
+let map = null;
 let livePolyline = null;
-let playbackIdx = 0; 
-let playbackTimer = null;
 
-// GÜVENLİ SABAH SÜRÜMÜNE GERİ DÖNÜŞ
 window.addEventListener('load', () => {
-  loadMaintenanceData();
-  setupAnkaraRadarData();
+  // HARİTA AYARI: Sabah çalışan, en standart OSM bağlantısı
+  map = L.map('map', { zoomControl: false, attributionControl: false }).setView([39.9208, 32.8541], 13);
   
-  try {
-    map = L.map('map', { zoomControl: false, attributionControl: false }).setView([39.9208, 32.8541], 13);
-    
-    // SABAH %100 ÇALIŞTIĞINI TEST ETTİĞİMİZ KORUMALI CARTO LABELS SİSTEMİ
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      maxZoom: 20
-    }).addTo(map);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: ''
+  }).addTo(map);
 
-    livePolyline = L.polyline([], { color: '#7c6af7', weight: 5 }).addTo(map);
-    console.log("Güvenli koyu harita başarıyla restore edildi.");
-  } catch(e) {
-    console.log("Harita hatası engellendi.");
-  }
-
-  try { 
-    window.addEventListener('devicemotion', processDeviceMotion, true); 
-  } catch(e) {}
+  livePolyline = L.polyline([], { color: '#7c6af7', weight: 6 }).addTo(map);
   
-  const mainButton = document.getElementById('btn-ride-toggle');
-  if (mainButton) {
-    mainButton.onclick = handleMainButtonClick;
-  }
+  document.getElementById('btn-ride-toggle').onclick = () => {
+    alert("Buton aktif çalışıyor.");
+  };
 });
-
-function loadMaintenanceData() {
-  if (localStorage.getItem('current_car_km')) document.getElementById('input-current-km').value = localStorage.getItem('current_car_km');
-  if (localStorage.getItem('next_maint_km')) document.getElementById('input-next-maint-km').value = localStorage.getItem('next_maint_km');
-  calculateRemainingKm(); 
-}
-
-function saveMaintenanceData() {
-  localStorage.setItem('current_car_km', document.getElementById('input-current-km').value);
-  localStorage.setItem('next_maint_km', document.getElementById('input-next-maint-km').value);
-  calculateRemainingKm();
-}
-
-function calculateRemainingKm() {
-  let currentKm = parseFloat(document.getElementById('input-current-km').value) || 0;
-  let nextMaintKm = parseFloat(document.getElementById('input-next-maint-km').value) || 0;
-  let remaining = nextMaintKm - currentKm;
-  
-  document.getElementById('label-remaining-km').textContent = `${remaining.toFixed(1)} km`;
-  
-  const alertZone = document.getElementById('maintenance-alert-zone');
-  if (remaining <= 0) {
-    alertZone.style.display = 'block';
-    document.getElementById('alert-desc').textContent = `Aracın periyodik bakım kilometresi ${Math.abs(remaining).toFixed(1)} km geçti!`;
-  } else {
-    alertZone.style.display = 'none';
-  }
-}
-
-function setupAnkaraRadarData() {
-  const wrapper = document.getElementById('traffic-list-wrapper');
-  if(!wrapper) return;
-  wrapper.innerHTML = '';
-  
-  const trafficDb = [
-    { name: "Eskişehir Yolu (Dumlupınar Blv.) - Çukurambar Aksı", status: "Yoğun", speed: "22 km/s" },
-    { name: "İstanbul Yolu - Çiftlik Kavşağı Bölgesi", status: "Kilit", speed: "12 km/s" },
-    { name: "Konya Yolu (Mevlana Blv.) - Taurus AVM Önü", status: "Yoğun", speed: "28 km/s" },
-    { name: "Kızılay - Atatürk Bulvarı Merkez Hattı", status: "Kilit", speed: "8 km/s" }
-  ];
-
-  trafficDb.forEach(item => {
-    let li = document.createElement('li');
-    li.className = 'traffic-item';
-    li.innerHTML = `<span class="traffic-road-name">${item.name}</span><span class="traffic-status-badge ${item.status==='Kilit'?'status-jam':'status-heavy'}">${item.speed}</span>`;
-    wrapper.appendChild(li);
-  });
-}
-
-function handleMainButtonClick() {
-  const btn = document.getElementById('btn-ride-toggle');
-  if (!btn) return;
-
-  if (currentAppFlowState === 'ready') {
-    if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-      DeviceMotionEvent.requestPermission().then(state => {
-        if (state === 'granted') window.addEventListener('devicemotion', processDeviceMotion, true);
-      }).catch(e => {});
-    }
-
-    currentAppFlowState = 'recording';
-    driveSessionData = []; 
-    sessionMaxG = 0;
-    totalDrivenMetersThisSession = 0;
-    rideStartTime = Date.now();
-    
-    document.getElementById('ride-badge').textContent = 'CANLI TAKİP'; 
-    document.getElementById('ride-badge').className = 'card-badge badge-active';
-    document.getElementById('ride-feedback').style.display = 'none';
-
-    durationTimer = setInterval(() => {
-      document.getElementById('metric-duration').textContent = formatTime(Date.now() - rideStartTime);
-      if(driveSessionData.length === 0 || Math.random() > 0.6) {
-        let dummyG = (Math.random() * 0.12).toFixed(2);
-        document.getElementById('ride-value').textContent = dummyG;
-      }
-    }, 1000);
-
-    if (navigator.geolocation) {
-      watchId = navigator.geolocation.watchPosition(
-        (pos) => {
-          let lat = pos.coords.latitude; 
-          let lon = pos.coords.longitude;
-          currentSpeedKmh = Math.round((pos.coords.speed || 0) * 3.6) || 45;
-          document.getElementById('metric-speed').textContent = `${currentSpeedKmh} km/s`;
-          let currentG = parseFloat(document.getElementById('ride-value').textContent) || 0;
-          
-          driveSessionData.push({ lat, lon, speed: currentSpeedKmh, gForce: currentG });
-          
-          if(map && livePolyline) {
-            livePolyline.addLatLng([lat, lon]);
-            map.setView([lat, lon], 15);
-          }
-          
-          totalDrivenMetersThisSession += 80;
-          document.getElementById('metric-distance').textContent = `${(totalDrivenMetersThisSession/1000).toFixed(2)} km`;
-        },
-        (err) => {}, 
-        { enableHighAccuracy: true, timeout: 6000 }
-      );
-    }
-
-    btn.textContent = 'S
+</script>
+</body>
+</html>
