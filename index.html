@@ -126,7 +126,7 @@
     <div class="metrics-row-triple">
       <div class="metric-subbox">
         <div class="m-lbl">Sürüş Mesafesi</div>
-        <div class="m-val" id="metric-distance">0 m</div>
+        <div class="m-val" id="metric-distance">0.00 km</div>
       </div>
       <div class="metric-subbox">
         <div class="m-lbl">Mevcut Hız</div>
@@ -179,38 +179,46 @@ let livePolyline = null;
 let playbackIdx = 0; 
 let playbackTimer = null;
 
-// SAYFA YÜKLENDİĞİNDE SABAHKİ SAĞLAM TEMELİ BAŞLAT
+// İKİ COĞRAFİ KOORDİNAT ARASINDAKİ METREYİ HESAPLAYAN HAVERSINE ALGORİTMASI
+function getDistanceMeters(lat1, lon1, lat2, lon2) {
+  const R = 6371000; // Dünya yarıçapı (metre)
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
+// SAYFA YÜKLENDİĞİNDE BAŞLAT
 window.addEventListener('load', () => {
   loadMaintenanceData();
   setupAnkaraRadarData();
   
-  // Resmi Leaflet ve Güvenli CartoDB Haritası İlklendirmesi
   try {
     map = L.map('map', { zoomControl: false, attributionControl: false }).setView([39.9208, 32.8541], 13);
     
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
       maxZoom: 20
     }).addTo(map);
-
     livePolyline = L.polyline([], { color: '#7c6af7', weight: 5 }).addTo(map);
-    console.log("Sabahki harita düzeni başarıyla kuruldu.");
+    console.log("Harita düzeni başarıyla kuruldu.");
   } catch(e) {
     console.log("Harita hatası yakalandı, butonların kilitlenmesi engellendi.");
   }
 
-  // Sensör dinleyicisi
   try { 
-    window.addEventListener('devicemotion', processDeviceMotion, true); 
+    window.addEventListener('devicemotion', processDeviceMotion, true);
   } catch(e) {}
   
-  // Buton Tıklama Bağlantısı (Kesin tetikleme için onclick)
   const mainButton = document.getElementById('btn-ride-toggle');
   if (mainButton) {
     mainButton.onclick = handleMainButtonClick;
   }
 });
 
-// BAKIM VE KİLOMETRE FONKSİYONLARI (Haritadan Tamamen İzole)
+// BAKIM VE KİLOMETRE FONKSİYONLARI
 function loadMaintenanceData() {
   if (localStorage.getItem('current_car_km')) document.getElementById('input-current-km').value = localStorage.getItem('current_car_km');
   if (localStorage.getItem('next_maint_km')) document.getElementById('input-next-maint-km').value = localStorage.getItem('next_maint_km');
@@ -239,7 +247,7 @@ function calculateRemainingKm() {
   }
 }
 
-// SABAHKİ BAŞARILI ANKARA RADAR VERİSİ
+// ANKARA RADAR VERİSİ
 function setupAnkaraRadarData() {
   const wrapper = document.getElementById('traffic-list-wrapper');
   if(!wrapper) return;
@@ -251,7 +259,6 @@ function setupAnkaraRadarData() {
     { name: "Konya Yolu (Mevlana Blv.) - Taurus AVM Önü", status: "Yoğun", speed: "28 km/s" },
     { name: "Kızılay - Atatürk Bulvarı Merkez Hattı", status: "Kilit", speed: "8 km/s" }
   ];
-
   trafficDb.forEach(item => {
     let li = document.createElement('li');
     li.className = 'traffic-item';
@@ -266,7 +273,6 @@ function handleMainButtonClick() {
   if (!btn) return;
 
   if (currentAppFlowState === 'ready') {
-    // İzin Mekanizmaları
     if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
       DeviceMotionEvent.requestPermission().then(state => {
         if (state === 'granted') window.addEventListener('devicemotion', processDeviceMotion, true);
@@ -278,15 +284,13 @@ function handleMainButtonClick() {
     sessionMaxG = 0;
     totalDrivenMetersThisSession = 0;
     rideStartTime = Date.now();
-    
     document.getElementById('ride-badge').textContent = 'CANLI TAKİP'; 
     document.getElementById('ride-badge').className = 'card-badge badge-active';
     document.getElementById('ride-feedback').style.display = 'none';
-
+    
     durationTimer = setInterval(() => {
       document.getElementById('metric-duration').textContent = formatTime(Date.now() - rideStartTime);
       
-      // Hareketsiz durumlar için canlı arayüz simülasyonu
       if(driveSessionData.length === 0 || Math.random() > 0.6) {
         let dummyG = (Math.random() * 0.12).toFixed(2);
         document.getElementById('ride-value').textContent = dummyG;
@@ -299,9 +303,24 @@ function handleMainButtonClick() {
         (pos) => {
           let lat = pos.coords.latitude; 
           let lon = pos.coords.longitude;
-          currentSpeedKmh = Math.round((pos.coords.speed || 0) * 3.6) || 45;
+          
+          // GERÇEK SÜRAT HESAPLAMASI (Simülasyon kaldırıldı)
+          let rawSpeed = pos.coords.speed;
+          currentSpeedKmh = (rawSpeed !== null && rawSpeed > 0) ? Math.round(rawSpeed * 3.6) : 0;
           document.getElementById('metric-speed').textContent = `${currentSpeedKmh} km/s`;
+          
           let currentG = parseFloat(document.getElementById('ride-value').textContent) || 0;
+          
+          // GERÇEK MESAFE HESAPLAMASI (Haversine entegrasyonu)
+          if (driveSessionData.length > 0) {
+            let lastPoint = driveSessionData[driveSessionData.length - 1];
+            let distanceDelta = getDistanceMeters(lastPoint.lat, lastPoint.lon, lat, lon);
+            
+            // GPS sıçramalarını ve araç dururken oluşan sapmaları engelleme filtresi (Hız > 2 km/s ise ekle)
+            if (currentSpeedKmh > 2 && distanceDelta > 1 && distanceDelta < 200) {
+              totalDrivenMetersThisSession += distanceDelta;
+            }
+          }
           
           driveSessionData.push({ lat, lon, speed: currentSpeedKmh, gForce: currentG });
           
@@ -310,7 +329,6 @@ function handleMainButtonClick() {
             map.setView([lat, lon], 15);
           }
           
-          totalDrivenMetersThisSession += 80;
           document.getElementById('metric-distance').textContent = `${(totalDrivenMetersThisSession/1000).toFixed(2)} km`;
         },
         (err) => { console.log("GPS Sinyali bekleniyor..."); }, 
@@ -328,11 +346,9 @@ function handleMainButtonClick() {
     
     document.getElementById('ride-badge').textContent = 'BİTTİ'; 
     document.getElementById('ride-badge').className = 'card-badge badge-warn';
-    
-    // GPS verisi yoksa Ankara içi simüle rota yükle
+
     if (driveSessionData.length < 2) injectMockupRouteForTesting();
 
-    // SÜRÜŞ BİTTİĞİNDE NET KİLOMETREYİ ARACIN MEVCUT KİLOMETRESİNE EKLEME
     let drivenKm = totalDrivenMetersThisSession / 1000;
     let oldCarKm = parseFloat(document.getElementById('input-current-km').value) || 0;
     let newCarKm = oldCarKm + drivenKm;
@@ -340,13 +356,13 @@ function handleMainButtonClick() {
     document.getElementById('input-current-km').value = newCarKm.toFixed(1);
     localStorage.setItem('current_car_km', newCarKm.toFixed(1));
     
-    calculateRemainingKm(); // Bakım mesafesini güncelle
+    calculateRemainingKm();
     
     document.getElementById('feedback-score').textContent = '%96';
     document.getElementById('ride-feedback').style.display = 'block';
     document.getElementById('feedback-text').innerHTML = `Sürüş analizi tamamlandı.<br>Araç kilometresine <b>${drivenKm.toFixed(2)} km</b> başarıyla işlendi.`;
 
-    btn.textContent = '▶ Sürüş Güzergahını Tekrar Oynat'; 
+    btn.textContent = '▶ Sürüş Güzergahını Tekrar Oynat';
     btn.className = 'ride-btn btn-play';
   } 
   else if (currentAppFlowState === 'summary') {
@@ -376,12 +392,13 @@ function injectMockupRouteForTesting() {
   driveSessionData = [];
   let sLat = 39.9208; let sLon = 32.8541;
   for (let i = 0; i < 20; i++) {
-    let pLat = sLat + (i * 0.0002); let pLon = sLon + (i * 0.0001);
+    let pLat = sLat + (i * 0.0002);
+    let pLon = sLon + (i * 0.0001);
     driveSessionData.push({ lat: pLat, lon: pLon, speed: 50, gForce: 0.03 + (Math.random()*0.04) });
     if (map && livePolyline) livePolyline.addLatLng([pLat, pLon]);
   }
   if (map) map.setView([sLat + 0.002, sLon + 0.001], 14);
-  totalDrivenMetersThisSession = 2400; 
+  totalDrivenMetersThisSession = 2400;
   document.getElementById('metric-distance').textContent = "2.40 km";
 }
 
