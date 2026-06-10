@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Bumpy Ride — Leaflet Geri Dönüş v6.1</title>
+<title>Bumpy Ride — Arka Plan Kilit v6.2</title>
 
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -52,7 +52,6 @@
   .metric-subbox .m-lbl { font-size: 9px; font-family: monospace; color: var(--text3); text-transform: uppercase; }
   .metric-subbox .m-val { font-size: 13px; font-family: monospace; font-weight: 700; margin-top: 4px; }
 
-  /* Leaflet Harita Alanı */
   .map-container { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); height: 240px; margin: 16px 0; position: relative; overflow: hidden; z-index: 1; }
   #map { width: 100%; height: 100%; }
 
@@ -72,7 +71,7 @@
 <div class="app">
   <div class="header">
     <div class="logo">Bumpy Ride Telemetry</div>
-    <div class="title">Sürüş Analitiği v6.1</div>
+    <div class="title">Sürüş Analitiği v6.2</div>
   </div>
 
   <div class="card">
@@ -114,7 +113,7 @@
       <div class="feedback-text" id="feedback-text">Analiz bekleniyor...</div>
     </div>
 
-    <div id="ride-label" style="text-align: center; font-size: 12px; font-family: monospace; color: var(--text2); margin-bottom: 16px;">Sürüşü Başlat butonuna basarak sensör ve konum izinlerini onaylayın.</div>
+    <div id="ride-label" style="text-align: center; font-size: 12px; font-family: monospace; color: var(--text2); margin-bottom: 16px;">Ekran kilidi ve duraklama korumaları aktiftir.</div>
 
     <div class="ride-btn-group">
       <button class="ride-btn btn-start" id="btn-ride-toggle">Sürüşü Başlat</button>
@@ -123,45 +122,39 @@
 </div>
 
 <script>
-// Global Durum Yönetimi
+// Durum Yönetimi
 let currentAppFlowState = 'ready'; 
 let driveSessionData = [];
 
-// Telemetry Takip Değişkenleri
+// Zamanlayıcılar ve Takip Değişkenleri
 let watchId = null;
 let rideStartTime = null;
 let durationTimer = null;
+let heartbeatTimer = null; // Anti-sleep ping zamanlayıcısı
+let wakeLock = null;       // Ekran kararmasını önleyici nesne
 let currentSpeedKmh = 0;
+let lastKnownLatLng = null;
 
 // İvme Analiz Havuzu
 let sessionMaxG = 0;
 let sessionTotalG = 0;
 let sessionCount = 0;
 
-// Leaflet Nesneleri
+// Leaflet Yapıları
 let map = null;
 let livePolyline = null; 
 let playbackMarker = null;
 
 window.addEventListener('DOMContentLoaded', () => {
-  // İlk yüklemede harita alt yapısını hazırla (Varsayılan olarak Ankara merkezli başlar)
   initLeafletMap(39.9208, 32.8541);
-  
-  // Destekleyen modern tarayıcılar için sensör dinleyicisini bağla
   window.addEventListener('devicemotion', calculateMotionStream, true);
-
-  // Ana Kontrol Butonu
   document.getElementById('btn-ride-toggle').addEventListener('click', handleMainButtonClick);
 });
 
-// LEAFLET ILK KURULUM MOTORU
 function initLeafletMap(startLat, startLon) {
   if (!map) {
     map = L.map('map', { zoomControl: false }).setView([startLat, startLon], 16);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19
-    }).addTo(map);
-    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
     livePolyline = L.polyline([], { color: '#f74a6a', weight: 5, opacity: 0.85 }).addTo(map);
   } else {
     map.setView([startLat, startLon], 16);
@@ -170,17 +163,31 @@ function initLeafletMap(startLat, startLon) {
   setTimeout(() => { map.invalidateSize(); }, 300);
 }
 
-// 3 EKSENLİ SARSINTI VE JİROSKOP VERİ AKIŞI
+// ARKA PLAN EKRAN KİLİDİNİ AKTİF ETME (WAKE LOCK)
+async function requestWakeLock() {
+  try {
+    if ('wakeLock' in navigator) {
+      wakeLock = await navigator.wakeLock.request('screen');
+      console.log('Wake Lock aktif: Ekran kapanmayacak.');
+    }
+  } catch (err) {
+    console.warn(`Wake Lock kilitlenemedi: ${err.message}`);
+  }
+}
+
+function releaseWakeLock() {
+  if (wakeLock !== null) {
+    wakeLock.release().then(() => { wakeLock = null; });
+  }
+}
+
 function calculateMotionStream(e) {
   if (currentAppFlowState === 'playing') return;
 
   let acc = e.accelerationIncludingGravity || e.acceleration;
   if (!acc) return;
 
-  let x = acc.x || 0;
-  let y = acc.y || 0;
-  let z = acc.z || 0;
-
+  let x = acc.x || 0; let y = acc.y || 0; let z = acc.z || 0;
   let totalForce = Math.sqrt(x*x + y*y + z*z);
   let gForce = totalForce / 9.80665;
   let netG = Math.abs(gForce - 1.0);
@@ -193,7 +200,6 @@ function calculateMotionStream(e) {
   if (currentAppFlowState === 'recording') {
     sessionTotalG += netG;
     sessionCount++;
-    
     if (netG > sessionMaxG) {
       sessionMaxG = netG;
       document.getElementById('ride-peak-label').textContent = `Tepe Noktası: ${sessionMaxG.toFixed(2)} G`;
@@ -201,25 +207,22 @@ function calculateMotionStream(e) {
   }
 }
 
-// ANA ETKİLEŞİM YÖNETİCİSİ
 function handleMainButtonClick() {
   const btn = document.getElementById('btn-ride-toggle');
 
   if (currentAppFlowState === 'ready') {
-    // 1. ADIM: HAREKET SENSÖRÜ İZİNLERİNİ İSTE (KULLANICI TIKLAMA ANINDA)
     if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-      DeviceMotionEvent.requestPermission()
-        .then(permissionState => {
-          if (permissionState === 'granted') {
-            window.addEventListener('devicemotion', calculateMotionStream, true);
-          }
-        })
-        .catch(err => console.log("Sensör izni atlandı."));
+      DeviceMotionEvent.requestPermission().then(state => {
+        if (state === 'granted') window.addEventListener('devicemotion', calculateMotionStream, true);
+      }).catch(()=>{});
     }
 
-    // Durumu Güncelle
+    // Wake Lock Kilidini Çağır
+    requestWakeLock();
+
     currentAppFlowState = 'recording';
     driveSessionData = []; sessionMaxG = 0; sessionTotalG = 0; sessionCount = 0; currentSpeedKmh = 0;
+    lastKnownLatLng = null;
     rideStartTime = Date.now();
     
     document.getElementById('ride-feedback').style.display = 'none';
@@ -227,17 +230,33 @@ function handleMainButtonClick() {
     document.getElementById('metric-speed').style.color = 'var(--accent2)';
     document.getElementById('ride-badge').textContent = 'CANLI TAKİP'; 
     document.getElementById('ride-badge').className = 'card-badge badge-active';
-    document.getElementById('ride-label').textContent = 'Sürüş kaydediliyor. Harita ve Telemetri aktif...';
+    document.getElementById('ride-label').textContent = 'Sürüş kaydı aktif. Ekran korumaları devrede...';
     
     if (livePolyline) livePolyline.setLatLngs([]);
     if (playbackMarker) { map.removeLayer(playbackMarker); playbackMarker = null; }
 
-    // Sürüş Süresi Zamanlayıcısını Başlat
     durationTimer = setInterval(() => {
       document.getElementById('metric-duration').textContent = formatTime(Date.now() - rideStartTime);
     }, 1000);
 
-    // 2. ADIM: GEOLOCATION (GPS) TAKİBİNİ BAŞLAT VE HARİTAYI MERKEZLE
+    // ANTI-SLEEP HEARTBEAT PING (Trafik ışığında uyumayı engeller)
+    heartbeatTimer = setInterval(() => {
+      if (currentAppFlowState === 'recording' && lastKnownLatLng) {
+        let currentNetG = parseFloat(document.getElementById('ride-value').textContent) || 0;
+        // Eğer duruluyorsa (hız=0), harita motorunun ve tarayıcının uyumaması için mevcut konumu sabit olarak havuzda tutmaya devam et
+        if (currentSpeedKmh === 0) {
+          driveSessionData.push({ 
+            lat: lastKnownLatLng.lat, 
+            lon: lastKnownLatLng.lon, 
+            speed: 0, 
+            gForce: currentNetG, 
+            timestamp: Date.now() 
+          });
+        }
+      }
+    }, 5000);
+
+    // GPS TAKİBİ
     if (navigator.geolocation) {
       watchId = navigator.geolocation.watchPosition(
         (pos) => {
@@ -245,8 +264,8 @@ function handleMainButtonClick() {
           
           let lat = pos.coords.latitude;
           let lon = pos.coords.longitude;
+          lastKnownLatLng = { lat, lon };
           
-          // Hız Hesaplama
           if (pos.coords.speed !== null && pos.coords.speed >= 0) {
             currentSpeedKmh = Math.round(pos.coords.speed * 3.6);
           } else if (driveSessionData.length > 0) {
@@ -256,24 +275,31 @@ function handleMainButtonClick() {
             if (timeDiffSec > 0) currentSpeedKmh = Math.round((dist / timeDiffSec) * 3.6);
           }
           
+          // JUMP-GAP PROTECTOR (Sıçrama Engelleme Filtresi)
+          // Eğer ekran kapandıktan sonra cihaz 3 km'den fazla bir mesafeyi tek saniyede geçmiş gibi görünüyorsa
+          // Araya yapay bir düz çizgi basıp datayı bozmasın diye filtre koyuyoruz.
+          if (driveSessionData.length > 0) {
+            let lastData = driveSessionData[driveSessionData.length - 1];
+            let checkDist = computeHaversineDistance(lastData.lat, lastData.lon, lat, lon);
+            if (checkDist > 3000 && (Date.now() - lastData.timestamp) < 15000) {
+               console.log("GPS Sıçraması saptandı, filtrelendi.");
+               return; // Hatalı sıçramayı kaydetme
+            }
+          }
+
           document.getElementById('metric-speed').textContent = `${currentSpeedKmh} km/s`;
           let currentNetG = parseFloat(document.getElementById('ride-value').textContent) || 0;
           
-          // Veriyi Hafızaya Ekle
           driveSessionData.push({ lat, lon, speed: currentSpeedKmh, gForce: currentNetG, timestamp: Date.now() });
           
-          // Haritada Çiz ve Odaklan
           let currentLatLng = [lat, lon];
           livePolyline.addLatLng(currentLatLng);
           map.setView(currentLatLng, 17);
           
           calculateTotalDistanceUI();
         },
-        (err) => {
-          console.warn("GPS Bağlantı Hatası:", err.message);
-          document.getElementById('ride-label').textContent = "GPS Sinyali aranıyor... Açık alana çıkın.";
-        }, 
-        { enableHighAccuracy: true, timeout: 6000, maximumAge: 0 }
+        (err) => { console.warn("GPS Sinyal Arama:", err.message); }, 
+        { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
       );
     }
 
@@ -282,17 +308,18 @@ function handleMainButtonClick() {
   } 
   else if (currentAppFlowState === 'recording') {
     currentAppFlowState = 'summary';
+    
+    // Zamanlayıcıları ve Wake-Lock'ı Serbest Bırak
     if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
     if (durationTimer) { clearInterval(durationTimer); durationTimer = null; }
+    if (heartbeatTimer) { clearInterval(heartbeatTimer); heartbeatTimer = null; }
+    releaseWakeLock();
     
     document.getElementById('ride-badge').textContent = 'BİTTİ'; 
     document.getElementById('ride-badge').className = 'card-badge badge-warn';
-    document.getElementById('ride-label').textContent = 'Sürüş sonlandırıldı. Konfor analizi hesaplandı.';
+    document.getElementById('ride-label').textContent = 'Sürüş sonlandırıldı. Konfor analizi hazır.';
     
-    // Yeterli GPS noktası yoksa simülasyon rotası enjekte et (Ev içi testler için)
-    if (driveSessionData.length < 2) {
-      injectMockupRouteForTesting();
-    }
+    if (driveSessionData.length < 2) injectMockupRouteForTesting();
 
     buildRideComfortReport();
 
@@ -310,7 +337,6 @@ function handleMainButtonClick() {
   }
 }
 
-// S SÜRÜŞ KONFOR RAPORALAMA ALGORİTMASI
 function buildRideComfortReport() {
   const feedbackBox = document.getElementById('ride-feedback');
   const scoreEl = document.getElementById('feedback-score');
@@ -325,20 +351,14 @@ function buildRideComfortReport() {
 
   let distanceStr = document.getElementById('metric-distance').textContent;
   let durationStr = document.getElementById('metric-duration').textContent;
-  let reportSummary = `Mesafe: ${distanceStr} | Süre: ${durationStr} | En Büyük Şok Darbesi: ${sessionMaxG.toFixed(2)} G. `;
+  let reportSummary = `Mesafe: ${distanceStr} | Süre: ${durationStr} | Tepe Sarsıntı: ${sessionMaxG.toFixed(2)} G. `;
 
-  if (comfortScore >= 85) {
-    textEl.textContent = reportSummary + "Mükemmel Konfor! Süspansiyon emilimi harika çalıştı veya zemin pürüzsüzdü.";
-  } else if (comfortScore >= 68) {
-    textEl.textContent = reportSummary + "Standart Konfor. Rutin asfalt dalgalanmaları ve bağlantı elemanları geçişi.";
-  } else if (comfortScore >= 45) {
-    textEl.textContent = reportSummary + "⚠️ Düşük Konfor! Bozuk satıhlar veya sert amortisör tepkileri saptandı.";
-  } else {
-    textEl.textContent = reportSummary + "🚨 Kritik Yol Koşulu! Yoğun çukurlar, parke taşları veya agresif tümsekler birleşik ivmeyi üst sınıra fırlattı.";
-  }
+  if (comfortScore >= 85) textEl.textContent = reportSummary + "Mükemmel Konfor! Stabil sürüş sağlandı.";
+  else if (comfortScore >= 68) textEl.textContent = reportSummary + "Standart Konfor. Rutin yol birleşim geçişleri.";
+  else if (comfortScore >= 45) textEl.textContent = reportSummary + "⚠️ Düşük Konfor! Belirgin bozuk zemin dalgalanması.";
+  else textEl.textContent = reportSummary + "🚨 Kritik Yol! Sert şok darbeleri ve yoğun sarsıntı kaydedildi.";
 }
 
-// LEAFLET ANIMASYONLU TEKRAR OYNATICI
 let playbackIdx = 0;
 let playbackTimer = null;
 
@@ -375,7 +395,7 @@ function startLeafletAnimatedPlayback() {
     document.getElementById('metric-speed').textContent = `${currentPoint.speed} km/s`;
     
     playbackIdx++;
-  }, 180);
+  }, 120);
 }
 
 function computeHaversineDistance(lat1, lon1, lat2, lon2) {
@@ -405,21 +425,15 @@ function formatTime(ms) {
 
 function injectMockupRouteForTesting() {
   let startCenter = map.getCenter();
-  let startLat = startCenter.lat;
-  let startLon = startCenter.lng;
+  let startLat = startCenter.lat; let startLon = startCenter.lng;
   driveSessionData = [];
-  
   for (let i = 0; i < 35; i++) {
-    let lat = startLat + (i * 0.00013);
-    let lon = startLon + (Math.sin(i * 0.4) * 0.00008);
+    let lat = startLat + (i * 0.00013); let lon = startLon + (Math.sin(i * 0.4) * 0.00008);
     let speed = Math.round(35 + Math.sin(i) * 12);
     let mockG = i % 8 === 0 ? 0.85 : (i % 5 === 0 ? 0.33 : 0.02);
-    
     driveSessionData.push({ lat, lon, speed, gForce: mockG, timestamp: Date.now() });
     if (livePolyline) livePolyline.addLatLng([lat, lon]);
-    
-    sessionTotalG += mockG;
-    sessionCount++;
+    sessionTotalG += mockG; sessionCount++;
     if (mockG > sessionMaxG) sessionMaxG = mockG;
   }
   document.getElementById('ride-peak-label').textContent = `Tepe Noktası: ${sessionMaxG.toFixed(2)} G`;
@@ -432,6 +446,8 @@ function restartApp() {
   if (playbackTimer) clearInterval(playbackTimer);
   if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
   if (durationTimer) { clearInterval(durationTimer); durationTimer = null; }
+  if (heartbeatTimer) { clearInterval(heartbeatTimer); heartbeatTimer = null; }
+  releaseWakeLock();
   
   if (playbackMarker) { map.removeLayer(playbackMarker); playbackMarker = null; }
   if (livePolyline) livePolyline.setLatLngs([]);
