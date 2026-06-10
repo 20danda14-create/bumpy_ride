@@ -3,16 +3,31 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Bumpy Ride — v7.0 Evrensel</title>
+<title>Bumpy Ride — v7.1 Entegre Sürüm</title>
 
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Bumpy Ride">
 
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
-
 <style>
+  /* LEAFLET ÇEKİRDEK CSS TASARIMI (Doğrudan Gömülü) */
+  .leaflet-pane,.leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow,.leaflet-tile-container,.leaflet-pane>svg,.leaflet-pane>canvas,.leaflet-zoom-box,.leaflet-image-layer,.leaflet-layer{position:absolute;left:0;top:0}
+  .leaflet-container{overflow:hidden;-ms-touch-action:none;touch-action:none;cursor:-webkit-grab;cursor:-moz-grab;cursor:grab;background:#ddd;font:12px/1.5 "Helvetica Neue",Arial,Helvetica,sans-serif}
+  .leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow{-webkit-user-select:none;-moz-user-select:none;user-select:none;-webkit-user-drag:none}
+  .leaflet-tile{filter:inherit;visibility:hidden}
+  .leaflet-tile-loaded{visibility:inherit}
+  .leaflet-zoom-box{width:0;height:0;box-sizing:border-box;z-index:800}
+  .leaflet-overlay-pane{z-index:400}
+  .leaflet-overlay-pane svg{pointer-events:none}
+  .leaflet-tile-pane{z-index:200}
+  .leaflet-shadow-pane{z-index:500}
+  .leaflet-marker-pane{z-index:600}
+  .leaflet-tooltip-pane{z-index:650}
+  .leaflet-popup-pane{z-index:700}
+  .leaflet-map-pane svg{z-index:1}
+  .leaflet-vml-shape{width:1px;height:1px}
+  .lvml{behavior:url(#default#VML);display:inline-block;position:absolute}
+
   :root {
     --bg: #0a0a0f;
     --surface: #12121a;
@@ -65,9 +80,9 @@
   .alert-popup-box p { font-size: 12px; font-family: monospace; color: var(--text); }
   
   .map-container { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); height: 230px; margin: 16px 0; position: relative; overflow: hidden; z-index: 1; }
-  #map { width: 100%; height: 100%; }
+  #map { width: 100%; height: 100%; background: #151522; }
 
-  .traffic-radar-box { background: rgba(247, 74, 106, 0.04); border: 1px solid rgba(247, 74, 106, 0.15); border-radius: var(--radius); padding: 16px; margin: 16px 0; display: none; }
+  .traffic-radar-box { background: rgba(247, 74, 106, 0.04); border: 1px solid rgba(247, 74, 106, 0.15); border-radius: var(--radius); padding: 16px; margin: 16px 0; display: block; }
   .radar-title { font-size: 12px; font-family: monospace; font-weight: bold; color: var(--danger); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px; display: flex; justify-content: space-between; }
   .traffic-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
   .traffic-item { background: rgba(255,255,255,0.02); border: 1px solid var(--border); padding: 10px; border-radius: var(--radius-sm); display: flex; justify-content: space-between; align-items: center; }
@@ -94,13 +109,25 @@
     100% { border-color: rgba(247, 74, 106, 0.4); background: rgba(247, 74, 106, 0.1); }
   }
 </style>
+
+<script>
+  // Eğer dış sunucu engellenirse tarayıcının çökmesini engelleyen yapay Leaflet Simülatörü
+  window.L = window.L || {
+    map: function() { return { setView: function(){}, removeLayer: function(){}, invalidateSize: function(){} }; },
+    polyline: function() { return { addTo: function(){}, setLatLngs: function(){}, addLatLng: function(){} }; },
+    circle: function() { return { addTo: function(){} }; },
+    marker: function() { return { addTo: function(){}, setLatLng: function(){} }; },
+    tileLayer: function() { return { addTo: function(){} }; }
+  };
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js" crossorigin="anonymous" defer></script>
 </head>
 <body>
 
 <div class="app">
   <div class="header">
     <div class="logo">Bumpy Ride Telemetry</div>
-    <div class="title">Sürüş Analitiği v7.0</div>
+    <div class="title">Sürüş Analitiği v7.1</div>
   </div>
 
   <div class="maintenance-box">
@@ -154,15 +181,19 @@
     </div>
 
     <div class="map-container">
-      <div id="map"></div>
+      <div id="map">
+        <div id="fallback-map-text" style="color: var(--text3); position: absolute; top: 45%; left: 10%; right: 10%; text-align: center; font-family: monospace; font-size: 11px; z-index: 0;">[ Harita Modülü Güvenli Başlatıldı ]<br>GPS Sinyali Alındığında Konum Çizilecektir</div>
+      </div>
     </div>
 
     <div class="traffic-radar-box" id="radar-panel">
       <div class="radar-title">
         <span>📡 5 KM Çapındaki Trafik Yoğunlukları</span>
-        <span style="color: var(--text3);">Canlı Hibrit</span>
+        <span style="color: var(--accent2);">Aktif Radar</span>
       </div>
-      <ul class="traffic-list" id="traffic-list-wrapper"></ul>
+      <ul class="traffic-list" id="traffic-list-wrapper">
+        <li class="traffic-item" style="font-size:12px; color:var(--text3); font-family:monospace; text-align:center; width:100%;">Radar aktif. Konum verisi alındığında Ankara ana arterleri listelenecektir.</li>
+      </ul>
     </div>
 
     <div class="feedback-box" id="ride-feedback">
@@ -198,12 +229,5 @@ let map = null; let livePolyline = null; let playbackMarker = null; let radarCir
 let audioCtx = null; let alarmIntervalId = null;
 let playbackIdx = 0; let playbackTimer = null;
 
-window.addEventListener('load', () => {
-  loadMaintenanceConfig();
-  setTimeout(() => {
-    initLeafletMap(39.9208, 32.8541);
-  }, 250);
-  try { 
-    window.addEventListener('devicemotion', calculateMotionStream, true); 
-  } catch(e) {}
-  document.getElementById('btn-ride-toggle').addEventListener('
+// SAYFA AÇILDIĞINDA MOTORU DOĞRUDAN BAŞLAT
+window.addEventListener('DOMContentLoaded
