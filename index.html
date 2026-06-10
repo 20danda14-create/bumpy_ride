@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Bumpy Ride — v7.8 Standart Harita Sürümü</title>
+<title>Bumpy Ride — v7.9 Kesin Kararlı Sürüm</title>
 
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -85,7 +85,7 @@
 <div class="app">
   <div class="header">
     <div class="logo">Bumpy Ride Telemetry</div>
-    <div class="title">Sürüş Analitiği v7.8</div>
+    <div class="title">Sürüş Analitiği v7.9</div>
   </div>
 
   <div class="maintenance-box">
@@ -102,183 +102,4 @@
     </div>
     <div class="maint-status-bar">
       <span style="color: var(--text2);">Bakıma Kalan Mesafe:</span>
-      <span id="label-remaining-km" style="font-family: monospace; font-weight: bold; color: var(--accent2); font-size: 14px;">-- km</span>
-    </div>
-  </div>
-
-  <div class="alert-popup-box" id="maintenance-alert-zone">
-    <h4 style="color:var(--danger)">🚨 BAKIM ZAMANI GELDİ!</h4>
-    <p id="alert-desc" style="font-size:12px; margin-top:4px;"></p>
-  </div>
-
-  <div class="card">
-    <div class="card-header">
-      <div class="card-label" id="panel-label">Anlık Telemetri</div>
-      <div class="card-badge badge-warn" id="ride-badge">Hazır</div>
-    </div>
-    
-    <div style="display: flex; justify-content: space-between; align-items: baseline;">
-      <div class="db-value" id="ride-value">0.00</div>
-      <div style="font-size: 11px; color: var(--text3); font-family: monospace" id="ride-peak-label">Tepe Noktası: 0.00 G</div>
-    </div>
-    
-    <div class="metrics-row-triple">
-      <div class="metric-subbox">
-        <div class="m-lbl">Sürüş Mesafesi</div>
-        <div class="m-val" id="metric-distance">0 m</div>
-      </div>
-      <div class="metric-subbox">
-        <div class="m-lbl">Mevcut Hız</div>
-        <div class="m-val" id="metric-speed" style="color: var(--accent2);">0 km/s</div>
-      </div>
-      <div class="metric-subbox">
-        <div class="m-lbl">Sürüş Süresi</div>
-        <div class="m-val" id="metric-duration">00:00:00</div>
-      </div>
-    </div>
-
-    <div class="map-container">
-      <div id="map"></div>
-    </div>
-
-    <div class="traffic-radar-box" id="radar-panel">
-      <div class="radar-title">
-        <span>📡 ANKARA AKTİF RADAR (5 KM YARIÇAP)</span>
-      </div>
-      <ul class="traffic-list" id="traffic-list-wrapper"></ul>
-    </div>
-
-    <div class="feedback-box" id="ride-feedback">
-      <div style="display:flex; justify-content:space-between; font-weight:bold; color:var(--accent2); margin-bottom:4px;">
-        <span>📋 Sürüş Konfor Raporu</span>
-        <span id="feedback-score" style="color:var(--accent3)">Skor: --</span>
-      </div>
-      <div class="feedback-text" id="feedback-text" style="font-size:12px; font-family:monospace;"></div>
-    </div>
-
-    <div class="ride-btn-group">
-      <button class="ride-btn btn-start" id="btn-ride-toggle">Sürüşü Başlat</button>
-    </div>
-  </div>
-</div>
-
-<script>
-let currentAppFlowState = 'ready'; 
-let driveSessionData = [];
-let watchId = null;
-let rideStartTime = null;
-let durationTimer = null;
-let currentSpeedKmh = 0;
-let sessionMaxG = 0;
-let totalDrivenMetersThisSession = 0;
-
-let map = null; 
-let livePolyline = null;
-let playbackIdx = 0; 
-let playbackTimer = null;
-
-window.addEventListener('load', () => {
-  loadMaintenanceData();
-  setupAnkaraRadarData();
-  
-  try {
-    map = L.map('map', { zoomControl: false, attributionControl: false }).setView([39.9208, 32.8541], 13);
-    
-    // DEĞİŞEN SATIR: Harita katmanı standart renkli OpenStreetMap yapıldı
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19
-    }).addTo(map);
-
-    // Çizginin harita üzerinde net görülmesi için rengini koyu mor/mavi tonuna çektim
-    livePolyline = L.polyline([], { color: '#5b43f5', weight: 6 }).addTo(map);
-    console.log("Standart renkli harita başarıyla yüklendi.");
-  } catch(e) {
-    console.log("Harita yükleme koruması devrede.");
-  }
-
-  try { 
-    window.addEventListener('devicemotion', processDeviceMotion, true); 
-  } catch(e) {}
-  
-  const mainButton = document.getElementById('btn-ride-toggle');
-  if (mainButton) {
-    mainButton.onclick = handleMainButtonClick;
-  }
-});
-
-function loadMaintenanceData() {
-  if (localStorage.getItem('current_car_km')) document.getElementById('input-current-km').value = localStorage.getItem('current_car_km');
-  if (localStorage.getItem('next_maint_km')) document.getElementById('input-next-maint-km').value = localStorage.getItem('next_maint_km');
-  calculateRemainingKm(); 
-}
-
-function saveMaintenanceData() {
-  localStorage.setItem('current_car_km', document.getElementById('input-current-km').value);
-  localStorage.setItem('next_maint_km', document.getElementById('input-next-maint-km').value);
-  calculateRemainingKm();
-}
-
-function calculateRemainingKm() {
-  let currentKm = parseFloat(document.getElementById('input-current-km').value) || 0;
-  let nextMaintKm = parseFloat(document.getElementById('input-next-maint-km').value) || 0;
-  let remaining = nextMaintKm - currentKm;
-  
-  document.getElementById('label-remaining-km').textContent = `${remaining.toFixed(1)} km`;
-  
-  const alertZone = document.getElementById('maintenance-alert-zone');
-  if (remaining <= 0) {
-    alertZone.style.display = 'block';
-    document.getElementById('alert-desc').textContent = `Aracın periyodik bakım kilometresi ${Math.abs(remaining).toFixed(1)} km geçti!`;
-  } else {
-    alertZone.style.display = 'none';
-  }
-}
-
-function setupAnkaraRadarData() {
-  const wrapper = document.getElementById('traffic-list-wrapper');
-  if(!wrapper) return;
-  wrapper.innerHTML = '';
-  
-  const trafficDb = [
-    { name: "Eskişehir Yolu (Dumlupınar Blv.) - Çukurambar Aksı", status: "Yoğun", speed: "22 km/s" },
-    { name: "İstanbul Yolu - Çiftlik Kavşağı Bölgesi", status: "Kilit", speed: "12 km/s" },
-    { name: "Konya Yolu (Mevlana Blv.) - Taurus AVM Önü", status: "Yoğun", speed: "28 km/s" },
-    { name: "Kızılay - Atatürk Bulvarı Merkez Hattı", status: "Kilit", speed: "8 km/s" }
-  ];
-
-  trafficDb.forEach(item => {
-    let li = document.createElement('li');
-    li.className = 'traffic-item';
-    li.innerHTML = `<span class="traffic-road-name">${item.name}</span><span class="traffic-status-badge ${item.status==='Kilit'?'status-jam':'status-heavy'}">${item.speed}</span>`;
-    wrapper.appendChild(li);
-  });
-}
-
-function handleMainButtonClick() {
-  const btn = document.getElementById('btn-ride-toggle');
-  if (!btn) return;
-
-  if (currentAppFlowState === 'ready') {
-    if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-      DeviceMotionEvent.requestPermission().then(state => {
-        if (state === 'granted') window.addEventListener('devicemotion', processDeviceMotion, true);
-      }).catch(e => {});
-    }
-
-    currentAppFlowState = 'recording';
-    driveSessionData = []; 
-    sessionMaxG = 0;
-    totalDrivenMetersThisSession = 0;
-    rideStartTime = Date.now();
-    
-    document.getElementById('ride-badge').textContent = 'CANLI TAKİP'; 
-    document.getElementById('ride-badge').className = 'card-badge badge-active';
-    document.getElementById('ride-feedback').style.display = 'none';
-
-    durationTimer = setInterval(() => {
-      document.getElementById('metric-duration').textContent = formatTime(Date.now() - rideStartTime);
-      if(driveSessionData.length === 0 || Math.random() > 0.6) {
-        let dummyG = (Math.random() * 0.12).toFixed(2);
-        document.getElementById('ride-value').textContent = dummyG;
-      }
-    }, 1000);
+      <span id="
