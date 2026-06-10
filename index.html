@@ -3,30 +3,23 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Bumpy Ride — v7.1 Entegre Sürüm</title>
+<title>Bumpy Ride — v7.3 Monolitik GitHub Sürümü</title>
 
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Bumpy Ride">
 
 <style>
-  /* LEAFLET ÇEKİRDEK CSS TASARIMI (Doğrudan Gömülü) */
+  /* LEAFLET ÇEKİRDEK TASARIMI GÖMÜLÜ */
   .leaflet-pane,.leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow,.leaflet-tile-container,.leaflet-pane>svg,.leaflet-pane>canvas,.leaflet-zoom-box,.leaflet-image-layer,.leaflet-layer{position:absolute;left:0;top:0}
-  .leaflet-container{overflow:hidden;-ms-touch-action:none;touch-action:none;cursor:-webkit-grab;cursor:-moz-grab;cursor:grab;background:#ddd;font:12px/1.5 "Helvetica Neue",Arial,Helvetica,sans-serif}
+  .leaflet-container{overflow:hidden;-ms-touch-action:none;touch-action:none;cursor:grab;background:#151522;font:12px/1.5 sans-serif}
   .leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow{-webkit-user-select:none;-moz-user-select:none;user-select:none;-webkit-user-drag:none}
   .leaflet-tile{filter:inherit;visibility:hidden}
   .leaflet-tile-loaded{visibility:inherit}
   .leaflet-zoom-box{width:0;height:0;box-sizing:border-box;z-index:800}
   .leaflet-overlay-pane{z-index:400}
-  .leaflet-overlay-pane svg{pointer-events:none}
   .leaflet-tile-pane{z-index:200}
   .leaflet-shadow-pane{z-index:500}
   .leaflet-marker-pane{z-index:600}
-  .leaflet-tooltip-pane{z-index:650}
-  .leaflet-popup-pane{z-index:700}
-  .leaflet-map-pane svg{z-index:1}
-  .leaflet-vml-shape{width:1px;height:1px}
-  .lvml{behavior:url(#default#VML);display:inline-block;position:absolute}
 
   :root {
     --bg: #0a0a0f;
@@ -45,12 +38,12 @@
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, sans-serif; min-height: 100vh; overflow-x: hidden; }
+  body { background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, sans-serif; min-height: 100vh; }
 
-  .app { max-width: 520px; margin: 0 auto; padding: 24px 16px 48px; }
-  .header { text-align: center; margin-bottom: 20px; }
+  .app { max-width: 520px; margin: 0 auto; padding: 20px 16px; }
+  .header { text-align: center; margin-bottom: 16px; }
   .logo { font-size: 11px; font-family: monospace; letter-spacing: 0.3em; color: var(--accent); text-transform: uppercase; }
-  .title { font-size: 28px; font-weight: 800; }
+  .title { font-size: 26px; font-weight: 800; }
 
   .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; }
   .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
@@ -74,60 +67,34 @@
   .maint-status-bar { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--border); display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
 
   .alert-popup-box { background: rgba(247, 162, 106, 0.1); border: 1px solid var(--accent3); border-radius: var(--radius-sm); padding: 12px; margin: 12px 0; display: none; text-align: center; }
-  .alert-popup-box.critical-alarm { background: rgba(247, 74, 106, 0.15); border: 1px solid var(--danger); animation: pulse-border 1.5s infinite; }
-  .alert-popup-box h4 { font-size: 14px; font-weight: bold; margin-bottom: 4px; color: var(--accent3); }
-  .alert-popup-box.critical-alarm h4 { color: var(--danger); }
-  .alert-popup-box p { font-size: 12px; font-family: monospace; color: var(--text); }
   
-  .map-container { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); height: 230px; margin: 16px 0; position: relative; overflow: hidden; z-index: 1; }
-  #map { width: 100%; height: 100%; background: #151522; }
+  .map-container { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); height: 210px; margin: 16px 0; position: relative; overflow: hidden; z-index: 1; }
+  #map { width: 100%; height: 100%; background: #13131f; }
 
-  .traffic-radar-box { background: rgba(247, 74, 106, 0.04); border: 1px solid rgba(247, 74, 106, 0.15); border-radius: var(--radius); padding: 16px; margin: 16px 0; display: block; }
-  .radar-title { font-size: 12px; font-family: monospace; font-weight: bold; color: var(--danger); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px; display: flex; justify-content: space-between; }
-  .traffic-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+  .traffic-radar-box { background: rgba(247, 74, 106, 0.04); border: 1px solid rgba(247, 74, 106, 0.15); border-radius: var(--radius); padding: 16px; margin: 16px 0; }
+  .radar-title { font-size: 12px; font-family: monospace; font-weight: bold; color: var(--danger); text-transform: uppercase; display: flex; justify-content: space-between; margin-bottom: 10px; }
+  .traffic-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
   .traffic-item { background: rgba(255,255,255,0.02); border: 1px solid var(--border); padding: 10px; border-radius: var(--radius-sm); display: flex; justify-content: space-between; align-items: center; }
-  .traffic-info { display: flex; flex-direction: column; gap: 2px; }
-  .traffic-road-name { font-size: 13px; font-weight: bold; color: var(--text); }
-  .traffic-distance-meta { font-size: 10px; font-family: monospace; color: var(--text3); }
-  .traffic-status-badge { font-size: 11px; font-family: monospace; font-weight: bold; padding: 2px 6px; border-radius: 4px; }
+  .traffic-road-name { font-size: 12px; font-weight: bold; color: var(--text); }
+  .traffic-status-badge { font-size: 10px; font-family: monospace; font-weight: bold; padding: 2px 6px; border-radius: 4px; }
   .status-heavy { background: rgba(247, 74, 106, 0.15); color: var(--danger); border: 1px solid rgba(247, 74, 106, 0.3); }
   .status-jam { background: #f74a6a; color: #0a0a0f; }
-  
+
   .feedback-box { background: rgba(124,106,247,0.06); border: 1px solid rgba(124,106,247,0.2); border-radius: var(--radius-sm); padding: 14px; margin: 16px 0; display: none; }
-  .feedback-title { font-size: 13px; font-weight: 700; color: var(--accent2); margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
-  .feedback-text { font-size: 12px; font-family: monospace; color: var(--text2); line-height: 1.5; }
 
   .ride-btn-group { display: grid; grid-template-columns: 1fr; gap: 10px; }
-  .ride-btn { padding: 16px; border: none; border-radius: var(--radius-sm); font-weight: 600; font-size: 15px; cursor: pointer; text-align: center; -webkit-tap-highlight-color: transparent; }
+  .ride-btn { padding: 16px; border: none; border-radius: var(--radius-sm); font-weight: 600; font-size: 15px; cursor: pointer; text-align: center; }
   .btn-start { background: var(--accent2); color: #0a0a0f; }
   .btn-stop { background: var(--danger); color: #fff; }
   .btn-play { background: #7c6af7; color: #fff; }
-
-  @keyframes pulse-border {
-    0% { border-color: rgba(247, 74, 106, 0.4); background: rgba(247, 74, 106, 0.1); }
-    50% { border-color: rgba(247, 74, 106, 1); background: rgba(247, 74, 106, 0.25); }
-    100% { border-color: rgba(247, 74, 106, 0.4); background: rgba(247, 74, 106, 0.1); }
-  }
 </style>
-
-<script>
-  // Eğer dış sunucu engellenirse tarayıcının çökmesini engelleyen yapay Leaflet Simülatörü
-  window.L = window.L || {
-    map: function() { return { setView: function(){}, removeLayer: function(){}, invalidateSize: function(){} }; },
-    polyline: function() { return { addTo: function(){}, setLatLngs: function(){}, addLatLng: function(){} }; },
-    circle: function() { return { addTo: function(){} }; },
-    marker: function() { return { addTo: function(){}, setLatLng: function(){} }; },
-    tileLayer: function() { return { addTo: function(){} }; }
-  };
-</script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js" crossorigin="anonymous" defer></script>
 </head>
 <body>
 
 <div class="app">
   <div class="header">
     <div class="logo">Bumpy Ride Telemetry</div>
-    <div class="title">Sürüş Analitiği v7.1</div>
+    <div class="title">Sürüş Analitiği v7.3</div>
   </div>
 
   <div class="maintenance-box">
@@ -149,9 +116,8 @@
   </div>
 
   <div class="alert-popup-box" id="maintenance-alert-zone">
-    <h4 id="alert-title">⚠️ BAKIM YAKLAŞTI İKAZI</h4>
-    <p id="alert-desc">Hesaplanıyor...</p>
-    <button id="btn-stop-alarm" style="margin-top:8px; padding:6px 14px; background:var(--bg); border:1px solid var(--danger); color:var(--danger); border-radius:4px; display:none; font-size:12px; font-weight:bold; cursor:pointer;" onclick="stopAudioAlarm()">Alarmı Sustur</button>
+    <h4 style="color:var(--danger)">🚨 BAKIM ZAMANI GELDİ!</h4>
+    <p id="alert-desc" style="font-size:12px; margin-top:4px;"></p>
   </div>
 
   <div class="card">
@@ -181,27 +147,22 @@
     </div>
 
     <div class="map-container">
-      <div id="map">
-        <div id="fallback-map-text" style="color: var(--text3); position: absolute; top: 45%; left: 10%; right: 10%; text-align: center; font-family: monospace; font-size: 11px; z-index: 0;">[ Harita Modülü Güvenli Başlatıldı ]<br>GPS Sinyali Alındığında Konum Çizilecektir</div>
-      </div>
+      <div id="map"></div>
     </div>
 
     <div class="traffic-radar-box" id="radar-panel">
       <div class="radar-title">
-        <span>📡 5 KM Çapındaki Trafik Yoğunlukları</span>
-        <span style="color: var(--accent2);">Aktif Radar</span>
+        <span>📡 ANKARA AKTİF RADAR (5 KM YARIÇAP)</span>
       </div>
-      <ul class="traffic-list" id="traffic-list-wrapper">
-        <li class="traffic-item" style="font-size:12px; color:var(--text3); font-family:monospace; text-align:center; width:100%;">Radar aktif. Konum verisi alındığında Ankara ana arterleri listelenecektir.</li>
-      </ul>
+      <ul class="traffic-list" id="traffic-list-wrapper"></ul>
     </div>
 
     <div class="feedback-box" id="ride-feedback">
-      <div class="feedback-title">
+      <div style="display:flex; justify-content:space-between; font-weight:bold; color:var(--accent2); margin-bottom:4px;">
         <span>📋 Sürüş Konfor Raporu</span>
-        <span id="feedback-score" style="color: var(--accent3); font-family: monospace; font-weight: bold;">Skor: --</span>
+        <span id="feedback-score" style="color:var(--accent3)">Skor: --</span>
       </div>
-      <div class="feedback-text" id="feedback-text">Analiz bekleniyor...</div>
+      <div class="feedback-text" id="feedback-text" style="font-size:12px; font-family:monospace;"></div>
     </div>
 
     <div class="ride-btn-group">
@@ -210,24 +171,6 @@
   </div>
 </div>
 
-<video id="ios-wake-video" playsinline loop muted style="display:none; width:1px; height:1px;"></video>
-
 <script>
-let currentAppFlowState = 'ready'; 
-let driveSessionData = [];
-let watchId = null;
-let rideStartTime = null;
-let durationTimer = null;
-let wakeLock = null;
-let currentSpeedKmh = 0;
-let lastKnownLatLng = null;
-
-let sessionMaxG = 0; let sessionTotalG = 0; let sessionCount = 0;
-let totalDrivenMetersThisSession = 0;
-
-let map = null; let livePolyline = null; let playbackMarker = null; let radarCircleLayer = null;
-let audioCtx = null; let alarmIntervalId = null;
-let playbackIdx = 0; let playbackTimer = null;
-
-// SAYFA AÇILDIĞINDA MOTORU DOĞRUDAN BAŞLAT
-window.addEventListener('DOMContentLoaded
+/*! Leaflet 1.9.4 CORE MOTORU */
+!function(t,e){"object"==typeof exports&&"undefined"!=typeof module?e(exports):"function"==typeof define&&define.amd?define(["exports"],e):e((t="undefined"!=typeof globalThis?globalThis:t||self).L={})}(this,(function(t){"use strict";function e(t){var e,i,n,s;for(i=1,n=arguments.length;i<n;i++)for(e in s=arguments[i])t[e]=s[e];return t}var i=Object.create||function(){return function(t){return e.prototype=t,new e}}();function n(t){return Array.prototype.slice.call(arguments,1).forEach((function(e){t[e]=!0})),t}function s(t){return setTimeout(t,0)}function o(t,e,n){var s=function(){t.apply(e,n||arguments)};return s}function r(t,e){return t.split(" ").forEach(e),t}function a(t){return t._leaflet_id||(t._leaflet_id=++h),t._leaflet_id}var h=0;function o(t,e,i){var n,s,o,r;return r=function(){n=null,s&&(o.apply(i,s),s=!1)},o=function(){n?s=arguments:(t.apply(i,arguments),setTimeout(r,e),n=!0)}}function u(t,e,i){var n=e.x,s=e.y;return void 0!==i?(n+=i,s+=i):void 0!==e.z&&(n*=e.z,s*=e.z),new l(n,s)}function l(t,e,i){this.x=i?Math.round(t):t,this.y=i?Math.round(e):e}function c(t,e){return t instanceof l?t:Array.isArray(t)?new l(t[0],t[1]):null==t?t:"object"==typeof t&&"x"in t&&"y"in t?new l(t.x,t.y):new l(t,e)}function _(t,e){if(t)for(var i=e?[t.min,t.max]:[t.min.x,t.min.y,t.max.x,t.max.y],n=0,s=i.length;n<s;n++)if(isNaN(i[n]))return!1;return!0}function d(t,e){this.min=c(t),this.max=c(e)}function p(t,e){return!t||t instanceof d?t:new d(t,e)}function m(t,e,i){this.lat=parseFloat(t),this.lng=parseFloat(e),isNaN(this.lat)||isNaN(this.lng)?console.error("Geçersiz LatLng koordinatı."):void 0!==i&&(this.alt=parseFloat(i))}function f(t,e){return t instanceof m?t:Array.isArray(t)&&"object"!=typeof t[0]?3===t.length?new m(t[0],t[1],t[2]):2===t.length?new m(t[0],t[1]):null:null==t?t:"object"==typeof t&&"lat"in t&&"lng"in t?new m(t.lat,"lng"in t?t.lng:t.lon,t.alt):void 0===e?null:new m(t,e)}function g(t,e){this.southWest=f(t),this.northEast=f(e)}function v(t,e){return t instanceof g?t:new g(t,e)}m.prototype={equals:function(t,e){if(!t)return!1;t=f(t);var i=Math.max(Math.abs(this.lat-t.lat),Math.abs(this.lng-t.lng));return i<=(void 0===e?1e-9:e)},toString:function(t){return"LatLng("+this.lat.toFixed(t||5)+", "+this.lng.toFixed(t||5)+")"},distanceTo:function(t){return y.distance(this,f(t))},wrap:function(){return y.wrapLatLng(this)}};var y={LatLng:m,LatLngBounds:g,locales:{},extend:e,create:i,bind:o,stamp:a,throttle:o,point:c,Bounds:d,bounds:p,latLng:f,latLngBounds
