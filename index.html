@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Bumpy Ride — v7.7 Geri Dönüş Sürümü</title>
+<title>Bumpy Ride — v7.7 Geri Dönüş Sürümü (Revize)</title>
 
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -61,7 +61,9 @@
   .alert-popup-box { background: rgba(247, 74, 106, 0.1); border: 1px solid var(--danger); border-radius: var(--radius-sm); padding: 12px; margin: 12px 0; display: none; text-align: center; }
   
   .map-container { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); height: 210px; margin: 16px 0; position: relative; overflow: hidden; z-index: 1; }
-  #map { width: 100%; height: 100%; background: #13131f; }
+  
+  /* Harita aydınlatması %30 artırıldı (Filter Brightness 1.3) */
+  #map { width: 100%; height: 100%; background: #13131f; filter: brightness(1.3); }
 
   .traffic-radar-box { background: rgba(247, 74, 106, 0.04); border: 1px solid rgba(247, 74, 106, 0.15); border-radius: var(--radius); padding: 16px; margin: 16px 0; }
   .radar-title { font-size: 12px; font-family: monospace; font-weight: bold; color: var(--danger); text-transform: uppercase; display: flex; justify-content: space-between; margin-bottom: 10px; }
@@ -152,116 +154,4 @@
     <div class="feedback-box" id="ride-feedback">
       <div style="display:flex; justify-content:space-between; font-weight:bold; color:var(--accent2); margin-bottom:4px;">
         <span>📋 Sürüş Konfor Raporu</span>
-        <span id="feedback-score" style="color:var(--accent3)">Skor: --</span>
-      </div>
-      <div class="feedback-text" id="feedback-text" style="font-size:12px; font-family:monospace;"></div>
-    </div>
-
-    <div class="ride-btn-group">
-      <button class="ride-btn btn-start" id="btn-ride-toggle">Sürüşü Başlat</button>
-    </div>
-  </div>
-</div>
-
-<script>
-// ANA TELEMETRI DEĞIŞKENLERI
-let currentAppFlowState = 'ready'; 
-let driveSessionData = [];
-let watchId = null;
-let rideStartTime = null;
-let durationTimer = null;
-let currentSpeedKmh = 0;
-let sessionMaxG = 0;
-let totalDrivenMetersThisSession = 0;
-
-let map = null; 
-let livePolyline = null;
-let playbackIdx = 0; 
-let playbackTimer = null;
-
-// İKİ COĞRAFİ KOORDİNAT ARASINDAKİ METREYİ HESAPLAYAN HAVERSINE ALGORİTMASI
-function getDistanceMeters(lat1, lon1, lat2, lon2) {
-  const R = 6371000; 
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-            Math.sin(dLon/2) * Math.sin(dLon/2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  return R * c;
-}
-
-// SAYFA YÜKLENDİĞİNDE BAŞLAT (Zırhlı Yapı)
-window.addEventListener('load', () => {
-  // localStorage bağımlı fonksiyonları try-catch ile tamamen izole ediyoruz
-  try { loadMaintenanceData(); } catch(e) { console.warn("Bakım verileri yüklenemedi (LocalStorage kısıtlı):", e); }
-  try { setupAnkaraRadarData(); } catch(e) { console.warn("Radar listesi yüklenemedi:", e); }
-  
-  try {
-    map = L.map('map', { zoomControl: false, attributionControl: false }).setView([39.9208, 32.8541], 13);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 20 }).addTo(map);
-    livePolyline = L.polyline([], { color: '#7c6af7', weight: 5 }).addTo(map);
-    console.log("Harita düzeni başarıyla kuruldu.");
-  } catch(e) {
-    console.warn("Harita başlatılamadı, butonların kilitlenmesi engellendi:", e);
-  }
-
-  try { 
-    window.addEventListener('devicemotion', processDeviceMotion, true);
-  } catch(e) {
-    console.warn("Cihaz hareket dinleyicisi ilk aşamada bağlanamadı.");
-  }
-  
-  // Scriptin buraya kadar çökmeden gelmesi garanti altına alındı
-  const mainButton = document.getElementById('btn-ride-toggle');
-  if (mainButton) {
-    mainButton.onclick = handleMainButtonClick;
-    console.log("Buton dinleyicisi başarıyla bağlandı. Uygulama hazır.");
-  }
-});
-
-// BAKIM VE KİLOMETRE FONKSİYONLARI (Korumalı Yapı)
-function loadMaintenanceData() {
-  try {
-    if (localStorage.getItem('current_car_km')) document.getElementById('input-current-km').value = localStorage.getItem('current_car_km');
-    if (localStorage.getItem('next_maint_km')) document.getElementById('input-next-maint-km').value = localStorage.getItem('next_maint_km');
-  } catch(e) { console.warn("LocalStorage okuma engellendi."); }
-  calculateRemainingKm();
-}
-
-function saveMaintenanceData() {
-  try {
-    localStorage.setItem('current_car_km', document.getElementById('input-current-km').value);
-    localStorage.setItem('next_maint_km', document.getElementById('input-next-maint-km').value);
-  } catch(e) { console.warn("LocalStorage yazma engellendi."); }
-  calculateRemainingKm();
-}
-
-function calculateRemainingKm() {
-  let currentKm = parseFloat(document.getElementById('input-current-km').value) || 0;
-  let nextMaintKm = parseFloat(document.getElementById('input-next-maint-km').value) || 0;
-  let remaining = nextMaintKm - currentKm;
-  
-  document.getElementById('label-remaining-km').textContent = `${remaining.toFixed(1)} km`;
-  
-  const alertZone = document.getElementById('maintenance-alert-zone');
-  if (alertZone) {
-    if (remaining <= 0) {
-      alertZone.style.display = 'block';
-      document.getElementById('alert-desc').textContent = `Aracın periyodik bakım kilometresi ${Math.abs(remaining).toFixed(1)} km geçti!`;
-    } else {
-      alertZone.style.display = 'none';
-    }
-  }
-}
-
-// ANKARA RADAR VERİSİ
-function setupAnkaraRadarData() {
-  const wrapper = document.getElementById('traffic-list-wrapper');
-  if(!wrapper) return;
-  wrapper.innerHTML = '';
-  
-  const trafficDb = [
-    { name: "Eskişehir Yolu (Dumlupınar Blv.) - Çukurambar Aksı", status: "Yoğun", speed: "22 km/s" },
-    { name: "İstanbul Yolu - Çiftlik Kavşağı Bölgesi", status: "Kilit", speed: "12 km/s" },
-    { name: "Konya Yolu (Mevlana
+        <span id
