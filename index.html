@@ -62,6 +62,9 @@
   
   .map-container { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); height: 210px; margin: 16px 0; position: relative; overflow: hidden; z-index: 1; }
   #map { width: 100%; height: 100%; background: #13131f; }
+  
+  /* Harita aydınlatma filtresi (%30 ilave parlaklık) */
+  .leaflet-tile-pane { filter: brightness(130%); }
 
   .traffic-radar-box { background: rgba(247, 74, 106, 0.04); border: 1px solid rgba(247, 74, 106, 0.15); border-radius: var(--radius); padding: 16px; margin: 16px 0; }
   .radar-title { font-size: 12px; font-family: monospace; font-weight: bold; color: var(--danger); text-transform: uppercase; display: flex; justify-content: space-between; margin-bottom: 10px; }
@@ -144,7 +147,7 @@
 
     <div class="traffic-radar-box" id="radar-panel">
       <div class="radar-title">
-        <span>📡 ANKARA AKTİF RADAR (5 KM YARIÇAP)</span>
+        <span>📡 AKTİF RADAR (5 KM YARIÇAP)</span>
       </div>
       <ul class="traffic-list" id="traffic-list-wrapper"></ul>
     </div>
@@ -222,7 +225,7 @@ window.addEventListener('load', () => {
 function loadMaintenanceData() {
   if (localStorage.getItem('current_car_km')) document.getElementById('input-current-km').value = localStorage.getItem('current_car_km');
   if (localStorage.getItem('next_maint_km')) document.getElementById('input-next-maint-km').value = localStorage.getItem('next_maint_km');
-  calculateRemainingKm(); 
+  calculateRemainingKm();
 }
 
 function saveMaintenanceData() {
@@ -284,10 +287,11 @@ function handleMainButtonClick() {
     sessionMaxG = 0;
     totalDrivenMetersThisSession = 0;
     rideStartTime = Date.now();
+
     document.getElementById('ride-badge').textContent = 'CANLI TAKİP'; 
     document.getElementById('ride-badge').className = 'card-badge badge-active';
     document.getElementById('ride-feedback').style.display = 'none';
-    
+
     durationTimer = setInterval(() => {
       document.getElementById('metric-duration').textContent = formatTime(Date.now() - rideStartTime);
       
@@ -303,27 +307,32 @@ function handleMainButtonClick() {
         (pos) => {
           let lat = pos.coords.latitude; 
           let lon = pos.coords.longitude;
+          let accuracy = pos.coords.accuracy || 0;
           
-          // GERÇEK SÜRAT HESAPLAMASI (Simülasyon kaldırıldı)
+          // Konum doğruluğu 50 metreden kötüyse bu veriyi atla (sıçramaları önler)
+          if (accuracy > 50 && driveSessionData.length > 0) return;
+
+          // GERÇEK SÜRAT HESAPLAMASI
           let rawSpeed = pos.coords.speed;
           currentSpeedKmh = (rawSpeed !== null && rawSpeed > 0) ? Math.round(rawSpeed * 3.6) : 0;
           document.getElementById('metric-speed').textContent = `${currentSpeedKmh} km/s`;
           
           let currentG = parseFloat(document.getElementById('ride-value').textContent) || 0;
           
-          // GERÇEK MESAFE HESAPLAMASI (Haversine entegrasyonu)
+          // GERÇEK MESAFE HESAPLAMASI (Hız kısıtı kaldırıldı, doğruluk artırıldı)
           if (driveSessionData.length > 0) {
             let lastPoint = driveSessionData[driveSessionData.length - 1];
             let distanceDelta = getDistanceMeters(lastPoint.lat, lastPoint.lon, lat, lon);
             
-            // GPS sıçramalarını ve araç dururken oluşan sapmaları engelleme filtresi (Hız > 2 km/s ise ekle)
-            if (currentSpeedKmh > 2 && distanceDelta > 1 && distanceDelta < 200) {
+            // Mesafenin mantıklı bir ilerleme olup olmadığını kontrol et (0.5m ile 150m arası).
+            // Dur-kalklarda mesafe kaybı yaşanmaması için hız > 2 filtresi iptal edildi.
+            if (distanceDelta >= 0.5 && distanceDelta < 150) {
               totalDrivenMetersThisSession += distanceDelta;
             }
           }
           
           driveSessionData.push({ lat, lon, speed: currentSpeedKmh, gForce: currentG });
-          
+
           if(map && livePolyline) {
             livePolyline.addLatLng([lat, lon]);
             map.setView([lat, lon], 15);
@@ -352,76 +361,6 @@ function handleMainButtonClick() {
     let drivenKm = totalDrivenMetersThisSession / 1000;
     let oldCarKm = parseFloat(document.getElementById('input-current-km').value) || 0;
     let newCarKm = oldCarKm + drivenKm;
-    
+
     document.getElementById('input-current-km').value = newCarKm.toFixed(1);
     localStorage.setItem('current_car_km', newCarKm.toFixed(1));
-    
-    calculateRemainingKm();
-    
-    document.getElementById('feedback-score').textContent = '%96';
-    document.getElementById('ride-feedback').style.display = 'block';
-    document.getElementById('feedback-text').innerHTML = `Sürüş analizi tamamlandı.<br>Araç kilometresine <b>${drivenKm.toFixed(2)} km</b> başarıyla işlendi.`;
-
-    btn.textContent = '▶ Sürüş Güzergahını Tekrar Oynat';
-    btn.className = 'ride-btn btn-play';
-  } 
-  else if (currentAppFlowState === 'summary') {
-    currentAppFlowState = 'playing';
-    btn.textContent = '🔄 Yeni Sürüş İçin Sıfırla'; 
-    btn.className = 'ride-btn btn-start';
-    startLeafletAnimatedPlayback();
-  }
-  else if (currentAppFlowState === 'playing') {
-    location.reload();
-  }
-}
-
-function processDeviceMotion(e) {
-  let acc = e.accelerationIncludingGravity || e.acceleration; if (!acc) return;
-  let totalForce = Math.sqrt(acc.x*acc.x + acc.y*acc.y + acc.z*acc.z);
-  let netG = Math.abs((totalForce / 9.806) - 1.0);
-  if (netG < 0.04) netG = 0;
-  document.getElementById('ride-value').textContent = netG.toFixed(2);
-  if (netG > sessionMaxG) {
-    sessionMaxG = netG; 
-    document.getElementById('ride-peak-label').textContent = `Tepe Noktası: ${sessionMaxG.toFixed(2)} G`;
-  }
-}
-
-function injectMockupRouteForTesting() {
-  driveSessionData = [];
-  let sLat = 39.9208; let sLon = 32.8541;
-  for (let i = 0; i < 20; i++) {
-    let pLat = sLat + (i * 0.0002);
-    let pLon = sLon + (i * 0.0001);
-    driveSessionData.push({ lat: pLat, lon: pLon, speed: 50, gForce: 0.03 + (Math.random()*0.04) });
-    if (map && livePolyline) livePolyline.addLatLng([pLat, pLon]);
-  }
-  if (map) map.setView([sLat + 0.002, sLon + 0.001], 14);
-  totalDrivenMetersThisSession = 2400;
-  document.getElementById('metric-distance').textContent = "2.40 km";
-}
-
-function startLeafletAnimatedPlayback() {
-  if (driveSessionData.length === 0) return;
-  playbackIdx = 0;
-  if (playbackTimer) clearInterval(playbackTimer);
-  playbackTimer = setInterval(() => {
-    if (playbackIdx >= driveSessionData.length) { clearInterval(playbackTimer); return; }
-    let curr = driveSessionData[playbackIdx];
-    document.getElementById('ride-value').textContent = curr.gForce.toFixed(2);
-    document.getElementById('metric-speed').textContent = `${curr.speed} km/s`;
-    if (map) map.setView([curr.lat, curr.lon]);
-    playbackIdx++;
-  }, 120);
-}
-
-function formatTime(ms) {
-  let s = Math.floor(ms / 1000);
-  let m = Math.floor((s % 3600) / 60);
-  let r = s % 60;
-  return `00:${m.toString().padStart(2,'0')}:${r.toString().padStart(2,'0')}`;
-}
-</script>
-</body>
-</html>
