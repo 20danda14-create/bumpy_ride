@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Bumpy Ride — v7.7 Geri Dönüş Sürümü (Revize)</title>
+<title>Bumpy Ride — v7.7 Geri Dönüş Sürümü (Tam Revize)</title>
 
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -62,7 +62,7 @@
   
   .map-container { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); height: 210px; margin: 16px 0; position: relative; overflow: hidden; z-index: 1; }
   
-  /* Harita aydınlatması %30 artırıldı (Filter Brightness 1.3) */
+  /* Harita aydınlatması %30 artırıldı */
   #map { width: 100%; height: 100%; background: #13131f; filter: brightness(1.3); }
 
   .traffic-radar-box { background: rgba(247, 74, 106, 0.04); border: 1px solid rgba(247, 74, 106, 0.15); border-radius: var(--radius); padding: 16px; margin: 16px 0; }
@@ -74,84 +74,4 @@
   .status-heavy { background: rgba(247, 74, 106, 0.15); color: var(--danger); border: 1px solid rgba(247, 74, 106, 0.3); }
   .status-jam { background: #f74a6a; color: #0a0a0f; }
 
-  .feedback-box { background: rgba(124,106,247,0.06); border: 1px solid rgba(124,106,247,0.2); border-radius: var(--radius-sm); padding: 14px; margin: 16px 0; display: none; }
-
-  .ride-btn-group { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 16px; }
-  .ride-btn { padding: 16px; border: none; border-radius: var(--radius-sm); font-weight: 600; font-size: 15px; cursor: pointer; text-align: center; width: 100%; display: block; }
-  .btn-start { background: var(--accent2); color: #0a0a0f; }
-  .btn-stop { background: var(--danger); color: #fff; }
-  .btn-play { background: #7c6af7; color: #fff; }
-</style>
-</head>
-<body>
-
-<div class="app">
-  <div class="header">
-    <div class="logo">Bumpy Ride Telemetry</div>
-    <div class="title">Sürüş Analitiği v7.7</div>
-  </div>
-
-  <div class="maintenance-box">
-    <div class="card-label">🛠️ ARAÇ BAKIM VE ODOMETRE ASİSTANI</div>
-    <div class="maint-inputs">
-      <div class="maint-input-group">
-        <label>Mevcut Araç Km</label>
-        <input type="number" id="input-current-km" value="125000" onchange="saveMaintenanceData()">
-      </div>
-      <div class="maint-input-group">
-        <label>Sonraki Bakım Km</label>
-        <input type="number" id="input-next-maint-km" value="135000" onchange="saveMaintenanceData()">
-      </div>
-    </div>
-    <div class="maint-status-bar">
-      <span style="color: var(--text2);">Bakıma Kalan Mesafe:</span>
-      <span id="label-remaining-km" style="font-family: monospace; font-weight: bold; color: var(--accent2); font-size: 14px;">-- km</span>
-    </div>
-  </div>
-
-  <div class="alert-popup-box" id="maintenance-alert-zone">
-    <h4 style="color:var(--danger)">🚨 BAKIM ZAMANI GELDİ!</h4>
-    <p id="alert-desc" style="font-size:12px; margin-top:4px;"></p>
-  </div>
-
-  <div class="card">
-    <div class="card-header">
-      <div class="card-label" id="panel-label">Anlık Telemetri</div>
-      <div class="card-badge badge-warn" id="ride-badge">Hazır</div>
-    </div>
-    
-    <div style="display: flex; justify-content: space-between; align-items: baseline;">
-      <div class="db-value" id="ride-value">0.00</div>
-      <div style="font-size: 11px; color: var(--text3); font-family: monospace" id="ride-peak-label">Tepe Noktası: 0.00 G</div>
-    </div>
-    
-    <div class="metrics-row-triple">
-      <div class="metric-subbox">
-        <div class="m-lbl">Sürüş Mesafesi</div>
-        <div class="m-val" id="metric-distance">0.00 km</div>
-      </div>
-      <div class="metric-subbox">
-        <div class="m-lbl">Mevcut Hız</div>
-        <div class="m-val" id="metric-speed" style="color: var(--accent2);">0 km/s</div>
-      </div>
-      <div class="metric-subbox">
-        <div class="m-lbl">Sürüş Süresi</div>
-        <div class="m-val" id="metric-duration">00:00:00</div>
-      </div>
-    </div>
-
-    <div class="map-container">
-      <div id="map"></div>
-    </div>
-
-    <div class="traffic-radar-box" id="radar-panel">
-      <div class="radar-title">
-        <span>📡 ANKARA AKTİF RADAR (5 KM YARIÇAP)</span>
-      </div>
-      <ul class="traffic-list" id="traffic-list-wrapper"></ul>
-    </div>
-
-    <div class="feedback-box" id="ride-feedback">
-      <div style="display:flex; justify-content:space-between; font-weight:bold; color:var(--accent2); margin-bottom:4px;">
-        <span>📋 Sürüş Konfor Raporu</span>
-        <span id
+  .feedback-box { background: rgba(124,106,247,0.06); border: 1px solid
