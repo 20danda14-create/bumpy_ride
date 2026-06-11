@@ -62,9 +62,6 @@
   
   .map-container { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); height: 210px; margin: 16px 0; position: relative; overflow: hidden; z-index: 1; }
   #map { width: 100%; height: 100%; background: #13131f; }
-  
-  /* Harita aydınlatma filtresi (%30 ilave parlaklık) */
-  .leaflet-tile-pane { filter: brightness(130%); }
 
   .traffic-radar-box { background: rgba(247, 74, 106, 0.04); border: 1px solid rgba(247, 74, 106, 0.15); border-radius: var(--radius); padding: 16px; margin: 16px 0; }
   .radar-title { font-size: 12px; font-family: monospace; font-weight: bold; color: var(--danger); text-transform: uppercase; display: flex; justify-content: space-between; margin-bottom: 10px; }
@@ -147,7 +144,7 @@
 
     <div class="traffic-radar-box" id="radar-panel">
       <div class="radar-title">
-        <span>📡 AKTİF RADAR (5 KM YARIÇAP)</span>
+        <span>📡 ANKARA AKTİF RADAR (5 KM YARIÇAP)</span>
       </div>
       <ul class="traffic-list" id="traffic-list-wrapper"></ul>
     </div>
@@ -184,7 +181,7 @@ let playbackTimer = null;
 
 // İKİ COĞRAFİ KOORDİNAT ARASINDAKİ METREYİ HESAPLAYAN HAVERSINE ALGORİTMASI
 function getDistanceMeters(lat1, lon1, lat2, lon2) {
-  const R = 6371000; // Dünya yarıçapı (metre)
+  const R = 6371000; 
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
   const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
@@ -194,43 +191,49 @@ function getDistanceMeters(lat1, lon1, lat2, lon2) {
   return R * c;
 }
 
-// SAYFA YÜKLENDİĞİNDE BAŞLAT
+// SAYFA YÜKLENDİĞİNDE BAŞLAT (Zırhlı Yapı)
 window.addEventListener('load', () => {
-  loadMaintenanceData();
-  setupAnkaraRadarData();
+  // localStorage bağımlı fonksiyonları try-catch ile tamamen izole ediyoruz
+  try { loadMaintenanceData(); } catch(e) { console.warn("Bakım verileri yüklenemedi (LocalStorage kısıtlı):", e); }
+  try { setupAnkaraRadarData(); } catch(e) { console.warn("Radar listesi yüklenemedi:", e); }
   
   try {
     map = L.map('map', { zoomControl: false, attributionControl: false }).setView([39.9208, 32.8541], 13);
-    
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      maxZoom: 20
-    }).addTo(map);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 20 }).addTo(map);
     livePolyline = L.polyline([], { color: '#7c6af7', weight: 5 }).addTo(map);
     console.log("Harita düzeni başarıyla kuruldu.");
   } catch(e) {
-    console.log("Harita hatası yakalandı, butonların kilitlenmesi engellendi.");
+    console.warn("Harita başlatılamadı, butonların kilitlenmesi engellendi:", e);
   }
 
   try { 
     window.addEventListener('devicemotion', processDeviceMotion, true);
-  } catch(e) {}
+  } catch(e) {
+    console.warn("Cihaz hareket dinleyicisi ilk aşamada bağlanamadı.");
+  }
   
+  // Scriptin buraya kadar çökmeden gelmesi garanti altına alındı
   const mainButton = document.getElementById('btn-ride-toggle');
   if (mainButton) {
     mainButton.onclick = handleMainButtonClick;
+    console.log("Buton dinleyicisi başarıyla bağlandı. Uygulama hazır.");
   }
 });
 
-// BAKIM VE KİLOMETRE FONKSİYONLARI
+// BAKIM VE KİLOMETRE FONKSİYONLARI (Korumalı Yapı)
 function loadMaintenanceData() {
-  if (localStorage.getItem('current_car_km')) document.getElementById('input-current-km').value = localStorage.getItem('current_car_km');
-  if (localStorage.getItem('next_maint_km')) document.getElementById('input-next-maint-km').value = localStorage.getItem('next_maint_km');
+  try {
+    if (localStorage.getItem('current_car_km')) document.getElementById('input-current-km').value = localStorage.getItem('current_car_km');
+    if (localStorage.getItem('next_maint_km')) document.getElementById('input-next-maint-km').value = localStorage.getItem('next_maint_km');
+  } catch(e) { console.warn("LocalStorage okuma engellendi."); }
   calculateRemainingKm();
 }
 
 function saveMaintenanceData() {
-  localStorage.setItem('current_car_km', document.getElementById('input-current-km').value);
-  localStorage.setItem('next_maint_km', document.getElementById('input-next-maint-km').value);
+  try {
+    localStorage.setItem('current_car_km', document.getElementById('input-current-km').value);
+    localStorage.setItem('next_maint_km', document.getElementById('input-next-maint-km').value);
+  } catch(e) { console.warn("LocalStorage yazma engellendi."); }
   calculateRemainingKm();
 }
 
@@ -242,11 +245,13 @@ function calculateRemainingKm() {
   document.getElementById('label-remaining-km').textContent = `${remaining.toFixed(1)} km`;
   
   const alertZone = document.getElementById('maintenance-alert-zone');
-  if (remaining <= 0) {
-    alertZone.style.display = 'block';
-    document.getElementById('alert-desc').textContent = `Aracın periyodik bakım kilometresi ${Math.abs(remaining).toFixed(1)} km geçti!`;
-  } else {
-    alertZone.style.display = 'none';
+  if (alertZone) {
+    if (remaining <= 0) {
+      alertZone.style.display = 'block';
+      document.getElementById('alert-desc').textContent = `Aracın periyodik bakım kilometresi ${Math.abs(remaining).toFixed(1)} km geçti!`;
+    } else {
+      alertZone.style.display = 'none';
+    }
   }
 }
 
@@ -259,108 +264,4 @@ function setupAnkaraRadarData() {
   const trafficDb = [
     { name: "Eskişehir Yolu (Dumlupınar Blv.) - Çukurambar Aksı", status: "Yoğun", speed: "22 km/s" },
     { name: "İstanbul Yolu - Çiftlik Kavşağı Bölgesi", status: "Kilit", speed: "12 km/s" },
-    { name: "Konya Yolu (Mevlana Blv.) - Taurus AVM Önü", status: "Yoğun", speed: "28 km/s" },
-    { name: "Kızılay - Atatürk Bulvarı Merkez Hattı", status: "Kilit", speed: "8 km/s" }
-  ];
-  trafficDb.forEach(item => {
-    let li = document.createElement('li');
-    li.className = 'traffic-item';
-    li.innerHTML = `<span class="traffic-road-name">${item.name}</span><span class="traffic-status-badge ${item.status==='Kilit'?'status-jam':'status-heavy'}">${item.speed}</span>`;
-    wrapper.appendChild(li);
-  });
-}
-
-// ANA BUTON AKIŞ YÖNETİMİ
-function handleMainButtonClick() {
-  const btn = document.getElementById('btn-ride-toggle');
-  if (!btn) return;
-
-  if (currentAppFlowState === 'ready') {
-    if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-      DeviceMotionEvent.requestPermission().then(state => {
-        if (state === 'granted') window.addEventListener('devicemotion', processDeviceMotion, true);
-      }).catch(e => console.log("Mobil sensör izni atlandı."));
-    }
-
-    currentAppFlowState = 'recording';
-    driveSessionData = []; 
-    sessionMaxG = 0;
-    totalDrivenMetersThisSession = 0;
-    rideStartTime = Date.now();
-
-    document.getElementById('ride-badge').textContent = 'CANLI TAKİP'; 
-    document.getElementById('ride-badge').className = 'card-badge badge-active';
-    document.getElementById('ride-feedback').style.display = 'none';
-
-    durationTimer = setInterval(() => {
-      document.getElementById('metric-duration').textContent = formatTime(Date.now() - rideStartTime);
-      
-      if(driveSessionData.length === 0 || Math.random() > 0.6) {
-        let dummyG = (Math.random() * 0.12).toFixed(2);
-        document.getElementById('ride-value').textContent = dummyG;
-      }
-    }, 1000);
-
-    // Canlı Konum Motoru (GPS)
-    if (navigator.geolocation) {
-      watchId = navigator.geolocation.watchPosition(
-        (pos) => {
-          let lat = pos.coords.latitude; 
-          let lon = pos.coords.longitude;
-          let accuracy = pos.coords.accuracy || 0;
-          
-          // Konum doğruluğu 50 metreden kötüyse bu veriyi atla (sıçramaları önler)
-          if (accuracy > 50 && driveSessionData.length > 0) return;
-
-          // GERÇEK SÜRAT HESAPLAMASI
-          let rawSpeed = pos.coords.speed;
-          currentSpeedKmh = (rawSpeed !== null && rawSpeed > 0) ? Math.round(rawSpeed * 3.6) : 0;
-          document.getElementById('metric-speed').textContent = `${currentSpeedKmh} km/s`;
-          
-          let currentG = parseFloat(document.getElementById('ride-value').textContent) || 0;
-          
-          // GERÇEK MESAFE HESAPLAMASI (Hız kısıtı kaldırıldı, doğruluk artırıldı)
-          if (driveSessionData.length > 0) {
-            let lastPoint = driveSessionData[driveSessionData.length - 1];
-            let distanceDelta = getDistanceMeters(lastPoint.lat, lastPoint.lon, lat, lon);
-            
-            // Mesafenin mantıklı bir ilerleme olup olmadığını kontrol et (0.5m ile 150m arası).
-            // Dur-kalklarda mesafe kaybı yaşanmaması için hız > 2 filtresi iptal edildi.
-            if (distanceDelta >= 0.5 && distanceDelta < 150) {
-              totalDrivenMetersThisSession += distanceDelta;
-            }
-          }
-          
-          driveSessionData.push({ lat, lon, speed: currentSpeedKmh, gForce: currentG });
-
-          if(map && livePolyline) {
-            livePolyline.addLatLng([lat, lon]);
-            map.setView([lat, lon], 15);
-          }
-          
-          document.getElementById('metric-distance').textContent = `${(totalDrivenMetersThisSession/1000).toFixed(2)} km`;
-        },
-        (err) => { console.log("GPS Sinyali bekleniyor..."); }, 
-        { enableHighAccuracy: true, timeout: 6000 }
-      );
-    }
-
-    btn.textContent = 'Sürüşü Bitir ve Kilometreye İşle'; 
-    btn.className = 'ride-btn btn-stop';
-  } 
-  else if (currentAppFlowState === 'recording') {
-    currentAppFlowState = 'summary';
-    if (watchId) navigator.geolocation.clearWatch(watchId);
-    if (durationTimer) clearInterval(durationTimer);
-    
-    document.getElementById('ride-badge').textContent = 'BİTTİ'; 
-    document.getElementById('ride-badge').className = 'card-badge badge-warn';
-
-    if (driveSessionData.length < 2) injectMockupRouteForTesting();
-
-    let drivenKm = totalDrivenMetersThisSession / 1000;
-    let oldCarKm = parseFloat(document.getElementById('input-current-km').value) || 0;
-    let newCarKm = oldCarKm + drivenKm;
-
-    document.getElementById('input-current-km').value = newCarKm.toFixed(1);
-    localStorage.setItem('current_car_km', newCarKm.toFixed(1));
+    { name: "Konya Yolu (Mevlana
